@@ -52,4 +52,4 @@ Copyright (c) 2026 smart-auth author and the respective rights holders. smart-au
 
 The software is provided **as is**, subject to the license's warranty and liability limitations and mandatory legal rights. It does not guarantee preservation of data, items, balances or account access. Steam restrictions and service changes remain outside the application's control.
 
-Third-party code, browser runtimes, extensions and research materials retain their own terms. See [third-party notices](THIRD-PARTY-NOTICES.md), [supplemental licenses](docs/THIRD-PARTY-LICENSES.txt), and [browser redistribution review](docs/DISTRIBUTION-NOTES.md). smart-auth is independent and is not affiliated with Valve, Steam, Google, SIH or the referenced upstream projects.
+Third-party code, browser runtimes, extensions and research materials retain their own terms. See [third-party notices](THIRD-PARTY-NOTICES.md), [supplemental licenses](docs/THIRD-PARTY-LICENSES.txt), and [browser redistribution review](docs/DISTRIBUTION-NOTES.md). smart-auth is independent and is not affiliated with Valve, Steam, Google or the referenced upstream projects.
