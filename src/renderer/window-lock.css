@@ -1,0 +1,24 @@
+body.window-locked > :not(#window-lock-mask) {
+  display: none !important;
+}
+#window-lock-mask {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 24px;
+  box-sizing: border-box;
+  text-align: center;
+  color: CanvasText;
+  background: Canvas;
+  font:
+    16px system-ui,
+    sans-serif;
+}
+#window-lock-mask button {
+  padding: 10px 20px;
+  cursor: pointer;
+  font: inherit;
+}

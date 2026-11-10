@@ -1,0 +1,17 @@
+node_modules/
+release/
+artifacts/
+*.maFile
+*.mafile
+*.vault
+*.vault.*
+*.log
+.env*
+test-results/
+playwright-report/
+secrets/
+Smart-SDA-export-*.json
+Smart-SDA-export-*/
+smart-auth-export-*.json
+smart-auth-export-*/
+

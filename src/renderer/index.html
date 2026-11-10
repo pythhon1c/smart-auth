@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <title>smart-auth</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="account-context.css" />
+    <link rel="stylesheet" href="browser-profile.css" />
+    <link rel="stylesheet" href="confirmation-details.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="toast" role="status"></div>
+    <dialog id="modal"><div id="modal-content"></div></dialog>
+    <script src="../locales/renderer.js"></script>
+    <script src="i18n.js"></script>
+    <script src="features.js"></script>
+    <script src="browser-profile.js"></script>
+    <script src="account-context.js"></script>
+    <script src="confirmation-details.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'"
+    />
+    <title>Loot · smart-auth</title>
+    <link rel="stylesheet" href="loot.css" />
+    <link rel="stylesheet" href="window-lock.css" />
+    <script src="../locales/renderer.js" defer></script>
+    <script src="window-lock.js" defer></script>
+    <script src="loot-i18n.js" defer></script>
+    <script src="loot.js" defer></script>
+  </head>
+  <body>
+    <main id="loot"></main>
+    <dialog id="loot-preview" aria-labelledby="preview-title"></dialog>
+    <div id="notice" role="status" aria-live="polite"></div>
+  </body>
+</html>

@@ -1,0 +1,113 @@
+{
+  "name": "smart-auth",
+  "version": "0.14.4-beta.2",
+  "description": "Windows Steam authenticator with encrypted storage, per-account proxies and trade automation",
+  "main": "src/main.cjs",
+  "author": "smart-auth",
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test --test-concurrency=4 tests/*.test.cjs",
+    "test:e2e": "node scripts/e2e.cjs",
+    "test:e2e-features": "node scripts/e2e-features.cjs",
+    "test:e2e-pin": "node scripts/e2e-pin.cjs",
+    "test:background-lock": "node scripts/e2e-background-lock.cjs",
+    "test:window-lock": "node scripts/renderer-window-lock.cjs",
+    "test:e2e-security": "node scripts/e2e-vault-security.cjs",
+    "test:totp-enrollment": "node scripts/e2e-totp-enrollment.cjs",
+    "test:data-integrity": "node scripts/e2e-data-integrity.cjs",
+    "test:password-manager": "node scripts/e2e-password-manager.cjs",
+    "test:authenticator": "node scripts/e2e-authenticator.cjs",
+    "test:renderer-authenticator": "node scripts/renderer-authenticator.cjs",
+    "test:proxy-check": "node scripts/e2e-proxy-check.cjs",
+    "test:e2e-performance": "node scripts/e2e-performance.cjs",
+    "test:e2e-background": "node scripts/e2e-background-pool.cjs",
+    "test:renderer-performance": "node scripts/renderer-performance-settings.cjs",
+    "test:renderer-bulk-progress": "node scripts/renderer-bulk-progress.cjs",
+    "test:renderer-account-context": "node scripts/renderer-account-context.cjs",
+    "test:renderer-account-actions": "node scripts/renderer-account-actions.cjs",
+    "test:renderer-bans": "node scripts/renderer-bans.cjs",
+    "test:account-context": "node scripts/e2e-account-context.cjs",
+    "test:startup-appearance": "node scripts/e2e-startup-appearance.cjs",
+    "test:renderer-startup-appearance": "node scripts/renderer-startup-appearance.cjs",
+    "test:renderer-proxy-privacy": "node scripts/renderer-proxy-privacy.cjs",
+    "test:ui": "node scripts/ui-preview.cjs",
+    "test:ui-layout": "node scripts/ui-layout.cjs",
+    "test:renderer-races": "node scripts/renderer-races.cjs",
+    "test:browser": "node scripts/e2e-browser.cjs",
+    "test:browser-startup": "node scripts/e2e-browser-startup-routing.cjs",
+    "test:browser-ipc": "node scripts/e2e-browser-ipc.cjs",
+    "test:browser-busy": "node scripts/e2e-browser-loot-busy.cjs",
+    "test:browser-profile": "node scripts/e2e-browser-profile.cjs",
+    "test:browser-window": "node scripts/e2e-browser-window.cjs",
+    "test:renderer-browser-profile": "node scripts/renderer-browser-profile.cjs",
+    "test:browser-packaged": "node scripts/smoke-browser-build.cjs",
+    "test:renderer-browser": "node scripts/renderer-browser.cjs",
+    "test:extension-persistence": "node scripts/e2e-extension-persistence.cjs",
+    "test:smart-trader-native": "node scripts/e2e-smart-trader-native-permission.cjs",
+    "test:tray": "node scripts/e2e-tray.cjs",
+    "test:tray-settings": "node scripts/e2e-tray-settings.cjs",
+    "test:confirmation-review": "node scripts/e2e-confirmation-review.cjs",
+    "test:confirmation-details": "node scripts/renderer-confirmation-details.cjs",
+    "test:incoming-offers": "node scripts/e2e-incoming-offers.cjs",
+    "test:loot": "node scripts/e2e-loot.cjs",
+    "test:loot-allocation": "node scripts/e2e-loot-allocation.cjs",
+    "test:loot-home": "node scripts/renderer-loot-home.cjs",
+    "test:renderer-loot": "node scripts/renderer-loot.cjs",
+    "test:confirmation-paging": "node scripts/renderer-confirmation-paging.cjs",
+    "prepare-browser": "node scripts/prepare-browser.cjs",
+    "prepare-release": "node scripts/prepare-release.cjs",
+    "dist": "electron-builder --win portable --x64",
+    "check": "node scripts/check.cjs",
+    "ci:local": "node scripts/ci-local.cjs",
+    "test:e2e-passwords": "node scripts/e2e-passwords.cjs",
+    "test:e2e-accounts": "node scripts/e2e-accounts.cjs",
+    "test:e2e-bans": "node scripts/e2e-bans.cjs",
+    "test:e2e-export": "node scripts/e2e-export.cjs",
+    "test:e2e-trade-bots": "node scripts/e2e-trade-bots.cjs"
+  },
+  "dependencies": {
+    "https-proxy-agent": "7.0.6",
+    "image-size": "2.0.4",
+    "jsqr": "1.4.0",
+    "playwright-core": "1.62.1",
+    "qrcode": "1.5.4",
+    "socks-proxy-agent": "8.0.5",
+    "steam-session": "1.9.4"
+  },
+  "devDependencies": {
+    "electron": "42.11.14",
+    "electron-builder": "26.15.3",
+    "playwright": "1.62.1",
+    "prettier": "3.6.2"
+  },
+  "build": {
+    "appId": "app.smartsda.desktop",
+    "productName": "smart-auth",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "!node_modules/playwright-core/lib/tools/skills/**/*",
+      "LICENSE",
+      "THIRD-PARTY-NOTICES.md",
+      "docs/THIRD-PARTY-LICENSES.txt",
+      "docs/DISTRIBUTION-NOTES.md",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "assets/app-icon.ico",
+      "signExecutable": false
+    },
+    "portable": {
+      "unpackDirName": true,
+      "artifactName": "smart-auth-${version}-win-x64.exe"
+    }
+  },
+  "packageManager": "pnpm@11.25.0"
+}

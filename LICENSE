@@ -1,0 +1,120 @@
+smart-auth Proprietary Use License
+Version 1.1 — 10 November 2026
+
+Copyright (c) 2026 the smart-auth author and the respective rights holders.
+All rights reserved except as expressly granted below.
+
+1. SCOPE AND OWNERSHIP
+
+This license applies to the original smart-auth application code, documentation
+and assets provided with this license, only to the extent that the licensor
+controls the necessary rights. The licensor is the author who holds the
+copyright in the original smart-auth work. The author retains ownership.
+
+Third-party components, dependencies, browser runtimes, extensions and
+externally owned assets retain their own licenses and terms.
+See THIRD-PARTY-NOTICES.md and docs/THIRD-PARTY-LICENSES.txt. Where third-party
+terms grant rights that differ from this license, those terms govern that
+component. This license does not restrict those rights or claim ownership of
+third-party material. An attribution alone is not a redistribution permission.
+
+2. PERMITTED USE
+
+You may use smart-auth free of charge for your own personal or internal business
+use. This permission includes downloading, installing and running an unmodified
+copy, making reasonable backups, inspecting the source, and compiling the
+unmodified source for that use. You may configure the application and enter
+or export your own data.
+
+You may use the Software only with accounts, credentials, data and property
+that you own or are authorized to manage. Your own data remains yours. Nothing
+in this license grants access to another person's accounts or a right to
+disregard applicable law or a third party's service terms.
+
+3. RIGHTS REQUIRING SEPARATE PERMISSION
+
+Subject to mandatory law, third-party licenses and the hosting terms described
+below, each of the following requires the author's prior written permission:
+
+(a) modifying, adapting or translating the program, or creating derivative works,
+(b) creating or maintaining a fork, including an independently developed branch
+    of the Software made available in another repository,
+(c) redistributing, publishing, sublicensing, selling, renting or leasing the
+    Software or substantial portions of it, including modified builds and source,
+(d) providing the Software to third parties as a hosted or managed service, or
+(e) removing or altering copyright, license, attribution or ownership notices.
+
+If the author publishes a repository on GitHub, users retain the rights the
+author grants directly under GitHub's applicable Terms of Service, including
+the right to fork a public repository on GitHub. Any additional rights to
+modify, distribute or publish the work require the author's prior written
+permission. You may request permission through the project's distribution
+channel.
+
+4. OPERATIONAL RISKS AND USER RESPONSIBILITIES
+
+This beta is still being tested. Use it at your own risk. A failure may cause
+loss of data, virtual items, balances or access to an account.
+
+smart-auth interacts with third-party accounts, authentication systems, proxies,
+browsers, inventories, markets and trade services. Operations may fail, be
+delayed, be duplicated by external services, become irreversible, or produce
+an uncertain result. Third parties may change their interfaces, rules or
+availability, or restrict, suspend, lock or terminate accounts. The Software
+does not promise protection against VAC, game or Community bans, trade holds,
+rate limits, fraud, compromised credentials, malware or third-party actions.
+
+You are responsible for choosing and reviewing your settings, counterparties,
+automation rules and transactions; protecting credentials and recovery keys;
+maintaining independent backups; and verifying results through the relevant
+service. No promise is made to recover passwords, lost data, balances, virtual
+items, trades or accounts. These statements do not reduce any non-waivable
+legal duty owed by the licensor.
+
+5. NO WARRANTY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED
+"AS IS" AND "AS AVAILABLE", WITH ALL FAULTS AND WITHOUT WARRANTIES OF ANY KIND,
+EXPRESS, IMPLIED OR STATUTORY, INCLUDING MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. NO WARRANTY IS MADE THAT IT
+WILL BE SECURE, ERROR-FREE, UNINTERRUPTED, COMPATIBLE WITH ANY FUTURE SERVICE,
+OR THAT DATA, ACCOUNTS, FUNDS OR VIRTUAL ITEMS WILL BE PRESERVED. THERE IS NO
+OBLIGATION TO PROVIDE SUPPORT, CORRECTIONS, UPDATES OR CONTINUED AVAILABILITY
+UNLESS SEPARATELY AGREED IN WRITING OR REQUIRED BY LAW.
+
+6. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSOR, AUTHORS,
+COPYRIGHT HOLDERS AND CONTRIBUTORS WILL NOT BE LIABLE FOR LOSS OF DATA,
+CREDENTIALS, ACCESS, VIRTUAL ITEMS, INVENTORY, BALANCES, PROFITS, REVENUE,
+BUSINESS OR GOODWILL; ACCOUNT RESTRICTIONS, SUSPENSION OR BANS; FAILED,
+UNAUTHORIZED OR UNINTENDED TRADES, PURCHASES, SALES OR CONFIRMATIONS; OR ANY
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, PUNITIVE OR CONSEQUENTIAL DAMAGES
+ARISING OUT OF THE SOFTWARE OR ITS USE OR INABILITY TO BE USED, WHETHER IN
+CONTRACT, TORT OR OTHERWISE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH LOSS.
+
+TO THE EXTENT LIABILITY MAY LAWFULLY BE LIMITED, THE TOTAL AGGREGATE LIABILITY
+OF THOSE PARTIES FOR ALL CLAIMS RELATING TO THE SOFTWARE WILL NOT EXCEED THE
+LICENSE FEES YOU ACTUALLY PAID TO THE LICENSOR FOR THE SOFTWARE DURING THE
+TWELVE MONTHS BEFORE THE EVENT GIVING RISE TO THE CLAIM.
+
+NOTHING IN THIS LICENSE EXCLUDES OR LIMITS LIABILITY OR RIGHTS THAT CANNOT
+LAWFULLY BE EXCLUDED OR LIMITED, INCLUDING APPLICABLE MANDATORY CONSUMER RIGHTS
+AND LIABILITY FOR FRAUD, INTENTIONAL MISCONDUCT, GROSS NEGLIGENCE, DEATH OR
+PERSONAL INJURY TO THE EXTENT SUCH EXCLUSION OR LIMITATION IS PROHIBITED BY LAW.
+IF A LIMITATION IS NOT PERMITTED IN YOUR JURISDICTION, IT DOES NOT APPLY TO
+THAT EXTENT; THE REMAINING LAWFUL LIMITATIONS CONTINUE TO APPLY.
+
+7. TERMINATION AND GENERAL TERMS
+
+The permissions granted by this license end if you materially violate its
+terms, subject to any mandatory notice or cure rights. On termination, stop
+using and remove copies of the Software; you retain ownership of your own
+data and may retain copies required by law. Sections concerning ownership,
+third-party rights, warranties, liability and reserved rights survive.
+
+This license does not retroactively revoke rights already granted under a
+different license. Any separately signed agreement prevails where it expressly
+conflicts with these terms. An unenforceable provision is limited only to the
+extent necessary, without making lawful remaining provisions ineffective.
+The English text is the authoritative version of this license.

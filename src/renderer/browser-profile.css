@@ -1,0 +1,34 @@
+.browser-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.browser-profile-field {
+  min-width: 0;
+}
+.browser-profile-field > input,
+.browser-profile-field > select {
+  width: 100%;
+  min-width: 0;
+}
+.browser-profile-field > .check {
+  margin-top: 6px;
+}
+.browser-profile-identity,
+.browser-profile-results {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 540px) {
+  .browser-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.browser-profile-identities,
+.browser-profile-results {
+  max-height: 120px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.browser-profile-identities .browser-profile-identity {
+  margin: 4px 0;
+}

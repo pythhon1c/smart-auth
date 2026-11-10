@@ -1,0 +1,108 @@
+.account-context-menu {
+  box-sizing: border-box;
+  position: fixed;
+  z-index: 1000;
+  width: 246px;
+  max-width: calc(100vw - 8px);
+  max-height: calc(100dvh - 8px);
+  overflow: auto;
+  padding: 5px;
+  background: var(--surface-raised, #223449);
+  color: var(--text, #edf2f7);
+  border: 1px solid var(--line, #425065);
+  border-radius: 9px;
+  box-shadow: 0 12px 32px #0008;
+  overscroll-behavior: contain;
+  scroll-padding-top: 114px;
+  scroll-padding-bottom: 5px;
+}
+.account-context-menu > button {
+  display: block;
+  width: 100%;
+  min-height: 31px;
+  padding: 6px 10px;
+  margin: 0;
+  text-align: left;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.account-context-menu > button:hover,
+.account-context-menu > button:focus-visible {
+  background: var(--active, #2a475e);
+  outline: 2px solid var(--mint, #66c0f4);
+  outline-offset: -2px;
+}
+.account-context-menu > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.account-context-menu > button.danger {
+  color: var(--danger, #ffb5ae);
+}
+.account-context-menu > .account-context-code {
+  position: sticky;
+  top: 40px;
+  z-index: 2;
+  background: var(--surface-raised, #223449);
+  border-bottom: 1px solid var(--line, #425065);
+  border-radius: 4px 4px 0 0;
+  margin-bottom: 3px;
+  height: 70px;
+  min-height: 70px;
+}
+.account-context-code small {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  display: block;
+}
+.account-context-code strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 20px;
+  letter-spacing: 0.08em;
+}
+.account-context-code progress {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin-top: 5px;
+  accent-color: var(--mint, #66c0f4);
+}
+
+.account-context-menu > .account-context-confirmations {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 40px;
+  min-height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+  background: var(--mint, #66c0f4);
+  color: #10212e;
+}
+:root[data-theme="light"]
+  .account-context-menu
+  > .account-context-confirmations {
+  color: white;
+}
+.account-context-menu > .account-context-confirmations:hover,
+.account-context-menu > .account-context-confirmations:focus-visible {
+  background: var(--mint, #66c0f4);
+  outline-color: currentColor;
+}
+
+/* Sticky controls remain opaque when disabled over the scrolling actions. */
+.account-context-menu > .account-context-confirmations:disabled,
+.account-context-menu > .account-context-code:disabled {
+  opacity: 1;
+  color: var(--muted, #acbdcf);
+  background: var(--surface-raised, #223449);
+}

@@ -1,0 +1,112 @@
+Smart SDA - supplemental third-party license notices
+
+These notices supplement, and do not replace, the licenses and notices shipped
+inside app.asar, Electron's LICENSE.electron.txt and LICENSES.chromium.html,
+or the managed browser's own terms, ABOUT and component notices. Third-party
+components retain their own terms independently of Smart SDA's application
+license. This file does not establish redistribution rights for the complete
+Google-branded browser binary.
+
+The two Nathan Rajlich notices below are reproduced from the License sections
+of the exact upstream README revisions associated with the installed versions.
+Those versions embed their license in README.md rather than a standalone
+LICENSE file; their README files were absent from the inspected 0.14.2 app.asar.
+
+==========================================================================
+agent-base 6.0.2
+Upstream: https://github.com/TooTallNate/node-agent-base
+Source: https://raw.githubusercontent.com/TooTallNate/node-agent-base/c4b8ea2e1a11bae023bb09b708050a50418204e9/README.md
+Version metadata: https://registry.npmjs.org/agent-base/6.0.2
+==========================================================================
+
+(The MIT License)
+
+Copyright (c) 2013 Nathan Rajlich &lt;nathan@tootallnate.net&gt;
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==========================================================================
+socks-proxy-agent 7.0.0
+Upstream: https://github.com/TooTallNate/node-socks-proxy-agent
+Source: https://raw.githubusercontent.com/TooTallNate/node-socks-proxy-agent/c178516b85c618f308bb4fd0002878c9dc5d9824/README.md
+Version metadata: https://registry.npmjs.org/socks-proxy-agent/7.0.0
+==========================================================================
+
+(The MIT License)
+Copyright (c) 2013 Nathan Rajlich &lt;nathan@tootallnate.net&gt;
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+'Software'), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==========================================================================
+@doctormckay/stdlib 2.10.0
+Upstream: https://github.com/DoctorMcKay/node-stdlib
+Source metadata: https://raw.githubusercontent.com/DoctorMcKay/node-stdlib/bbfba66834d1b5e4fac117aa43846ead1c4967f0/package.json
+Version metadata: https://registry.npmjs.org/@doctormckay%2fstdlib/2.10.0
+==========================================================================
+
+Upstream package.json declares license "MIT" and author Alex Corn
+<mckay@doctormckay.com>. No package-wide LICENSE or copyright-year statement
+was present in the inspected package or upstream root. The attribution here
+records that metadata; it does not invent a copyright year or an upstream
+copyright notice. The standard MIT permission and disclaimer text follows
+to supplement the upstream license declaration.
+
+The package's lib/hashing/crc32.js separately retains its full MIT notice,
+Copyright (c) 2013 Brian J. Brennan. That existing source notice remains
+authoritative for that component and must be preserved.
+
+The MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Standard MIT text reference: https://opensource.org/license/mit
