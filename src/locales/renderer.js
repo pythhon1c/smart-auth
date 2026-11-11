@@ -1,6 +1,64 @@
 "use strict";
 // Static UI translations and language-specific matching data.
 window.SmartLocaleData = Object.freeze({
+  appUpdates: "Оновлення програми",
+  appUpdateIdle: "Перевірте наявність нової версії smart-auth.",
+  appUpdateCheck: "Перевірити оновлення",
+  appUpdateDownload: "Завантажити оновлення",
+  appUpdateRestart: "Перезапустити в новій версії",
+  appUpdateChecking: "Перевірка оновлень…",
+  appUpdateDownloading: "Завантаження та перевірка оновлення…",
+  appUpdateRestarting: "Створення резервної копії та перезапуск…",
+  appUpdateCurrentVersion: "Поточна версія: {version}",
+  appUpdateAvailableVersion: "Нова версія: {version}",
+  appUpdateCurrent: "Встановлено актуальну версію.",
+  appUpdateAvailable: "Доступна нова версія.",
+  appUpdateReady: "Оновлення перевірено та готове до перезапуску.",
+  appUpdateFileConflict: "У папці smart-auth-updates уже є інший файл із назвою цієї збірки. Перейменуйте його й повторіть завантаження.",
+  appUpdateBadDownload: "Розмір або контрольна сума файлу не збігається з релізом. Повторіть завантаження.",
+  appUpdateBackupFailed: "Не вдалося зберегти резервну копію сховища. Перевірте вільне місце та доступ до папки даних і повторіть спробу.",
+  appUpdateFailed:
+    "Не вдалося виконати оновлення. Перевірте з’єднання та доступ до папки завантажень і повторіть дію. Якщо помилка лишається, перевірте оновлення знову.",
+  appUpdateStorageNote:
+    "Перевірений новий EXE зберігається поруч зі старим у Downloads/smart-auth-updates, не перезаписуючи його.",
+  appUpdateRestartNote:
+    "Натискання «Перезапустити в новій версії» створить резервну копію та закриє активні завдання програми.",
+  appUpdateTranslations: `Оновлення програми|App updates|Обновления программы
+У папці smart-auth-updates уже є інший файл із назвою цієї збірки. Перейменуйте його й повторіть завантаження.|The smart-auth-updates folder already contains a different file with this build's name. Rename that file and download again.|В папке smart-auth-updates уже есть другой файл с именем этой сборки. Переименуйте его и повторите загрузку.
+Розмір або контрольна сума файлу не збігається з релізом. Повторіть завантаження.|The file size or checksum differs from the release. Download it again.|Размер или контрольная сумма файла отличается от релиза. Повторите загрузку.
+Не вдалося зберегти резервну копію сховища. Перевірте вільне місце та доступ до папки даних і повторіть спробу.|The vault backup could not be saved. Check free space and access to the data folder, then try again.|Не удалось сохранить резервную копию хранилища. Проверьте свободное место и доступ к папке данных и повторите попытку.
+Перевірте наявність нової версії smart-auth.|Check for a new version of smart-auth.|Проверьте наличие новой версии smart-auth.
+Перевірити оновлення|Check for updates|Проверить обновления
+Завантажити оновлення|Download update|Скачать обновление
+Перезапустити в новій версії|Restart in new version|Перезапустить в новой версии
+Перевірка оновлень…|Checking for updates…|Проверка обновлений…
+Завантаження та перевірка оновлення…|Downloading and verifying update…|Загрузка и проверка обновления…
+Створення резервної копії та перезапуск…|Creating backup and restarting…|Создание резервной копии и перезапуск…
+Поточна версія: {version}|Current version: {version}|Текущая версия: {version}
+Нова версія: {version}|New version: {version}|Новая версия: {version}
+Встановлено актуальну версію.|You have the latest version.|Установлена актуальная версия.
+Доступна нова версія.|A new version is available.|Доступна новая версия.
+Оновлення перевірено та готове до перезапуску.|The update is verified and ready to restart.|Обновление проверено и готово к перезапуску.
+Не вдалося виконати оновлення. Перевірте з’єднання та доступ до папки завантажень і повторіть дію. Якщо помилка лишається, перевірте оновлення знову.|The update failed. Check your connection and access to Downloads, then retry. If the error continues, check for updates again.|Не удалось выполнить обновление. Проверьте соединение и доступ к папке загрузок и повторите действие. Если ошибка остаётся, проверьте обновления снова.
+Перевірений новий EXE зберігається поруч зі старим у Downloads/smart-auth-updates, не перезаписуючи його.|The verified new EXE is saved alongside the old one in Downloads/smart-auth-updates without overwriting it.|Проверенный новый EXE сохраняется рядом со старым в Downloads/smart-auth-updates, не перезаписывая его.
+Натискання «Перезапустити в новій версії» створить резервну копію та закриє активні завдання програми.|Clicking “Restart in new version” creates a backup and closes active app tasks.|Нажатие «Перезапустить в новой версии» создаст резервную копию и закроет активные задачи программы.`,
+  oneMafile: "Один .maFile",
+  optionalSteamPassword: "Пароль Steam (необов’язково)",
+  optionalDedicatedProxy: "Окремий проксі (необов’язково)",
+  singleImportDetailsHelp:
+    "Виберіть один .maFile. Пароль Steam та окремий проксі можна залишити порожніми.",
+  singleImportProxyExamples:
+    "Проксі: host:port, host:port:user:password або http://user:password@host:port. Для SOCKS5 виберіть відповідний протокол.",
+  dedicatedProxyWillBeAssigned: "Акаунту буде призначено окремий проксі.",
+  singleImportTranslations: `Один .maFile|One .maFile|Один .maFile
+Пароль Steam (необов’язково)|Steam password (optional)|Пароль Steam (необязательно)
+Окремий проксі (необов’язково)|Dedicated proxy (optional)|Отдельный прокси (необязательно)
+Виберіть один .maFile. Пароль Steam та окремий проксі можна залишити порожніми.|Choose one .maFile. Steam password and dedicated proxy can both be left empty.|Выберите один .maFile. Пароль Steam и отдельный прокси можно оставить пустыми.
+Проксі: host:port, host:port:user:password або http://user:password@host:port. Для SOCKS5 виберіть відповідний протокол.|Proxy: host:port, host:port:user:password or http://user:password@host:port. Select the matching protocol for SOCKS5.|Прокси: host:port, host:port:user:password или http://user:password@host:port. Для SOCKS5 выберите соответствующий протокол.
+Акаунту буде призначено окремий проксі.|A dedicated proxy will be assigned to the account.|Аккаунту будет назначен отдельный прокси.
+Виберіть рівно один файл .maFile з одним акаунтом.|Select exactly one .maFile containing one account.|Выберите ровно один файл .maFile с одним аккаунтом.
+Пароль Steam має містити не більше 4096 символів без перенесення рядків.|Steam password must contain at most 4096 characters without line breaks.|Пароль Steam должен содержать не более 4096 символов без переносов строк.
+Окремий пароль та проксі доступні лише для імпорту одного .maFile.|A separate password and proxy are only available when importing one .maFile.|Отдельный пароль и прокси доступны только при импорте одного .maFile.`,
   betaWarning:
     "Бета-версія ще проходить тестування. Використовуйте на власний ризик.",
   betaTranslations: `Бета-версія ще проходить тестування. Використовуйте на власний ризик.|Beta software is still being tested. Use at your own risk.|Бета-версия ещё проходит тестирование. Используйте на свой страх и риск.`,

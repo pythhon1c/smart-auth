@@ -135,4 +135,58 @@ function planAccountImport(data, prepared) {
     },
   };
 }
-module.exports = { planAccountImport, hasPassword };
+// Optional fields belong exclusively to the single-maFile workflow. This
+// validation runs before opening a dialog and never includes supplied secrets.
+function singleImportDetails(p) {
+  const supplied = (key) => p[key] !== undefined && p[key] !== "";
+  if (p.mode !== "single") {
+    if (["loginPassword", "proxyText", "proxyProtocol"].some(supplied))
+      throw Error(localeText.singleAccountDetailsOnly);
+    return null;
+  }
+  if (
+    p.loginPassword !== undefined &&
+    (typeof p.loginPassword !== "string" ||
+      p.loginPassword.length > 4096 ||
+      /[\r\n\0]/.test(p.loginPassword))
+  )
+    throw Error(localeText.invalidImportPassword);
+  if (p.proxyText !== undefined && typeof p.proxyText !== "string")
+    throw Error(localeText.enterOneProxyInASupportedFormat);
+  if (
+    p.proxyProtocol !== undefined &&
+    !["http", "https", "socks5"].includes(p.proxyProtocol)
+  )
+    throw Error(localeText.enterOneProxyInASupportedFormat);
+  let dedicatedProxy = null;
+  if (p.proxyText?.trim()) {
+    const { parseManualProxy } = require("./account-proxies.cjs");
+    dedicatedProxy = {
+      url: parseManualProxy(p.proxyText, p.proxyProtocol || "http"),
+    };
+  }
+  return { loginPassword: p.loginPassword || "", dedicatedProxy };
+}
+function prepareSingleAccountImport(paths, details) {
+  const prepared = require("./imports.cjs").prepareAccounts({
+    paths,
+    format: "sda",
+    mode: "single",
+    singleMafile: true,
+  });
+  if (prepared.errors.length || prepared.accounts.length !== 1)
+    throw Error(localeText.singleMafileRequired);
+  if (details.loginPassword) {
+    prepared.accounts[0].account.loginPassword = details.loginPassword;
+    // The explicit field replaces an embedded password for this one new
+    // account; existing saved passwords still use the normal conflict policy.
+    prepared.credentials = [];
+  }
+  return prepared;
+}
+module.exports = {
+  planAccountImport,
+  hasPassword,
+  singleImportDetails,
+  prepareSingleAccountImport,
+};

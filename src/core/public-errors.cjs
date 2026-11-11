@@ -4,6 +4,9 @@ const localeText = require("../locales/application.json");
 // introducing user-facing validation errors. Never add user/server text, source
 // parsing at runtime, language heuristics, prefix matching or broad templates.
 const PUBLIC_MESSAGES = new Set([
+  localeText.singleMafileRequired,
+  localeText.invalidImportPassword,
+  localeText.singleAccountDetailsOnly,
   "Accept the Google and Chrome terms before downloading the browser.",
   "Download the browser from Google before opening a profile.",
   localeText.message_669ba6a,

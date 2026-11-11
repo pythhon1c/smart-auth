@@ -1,4 +1,5 @@
 "use strict";
+const { migrateAppearanceSettings } = require("./appearance-settings.cjs");
 const localeText = require("../locales/application.json");
 const { allocationRoute } = require("./proxy-allocation.cjs");
 const { accountPolicy } = require("./account-policy.cjs");
@@ -193,8 +194,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   pinLockMinutes: 2,
   passwordLockMinutes: 10,
   pollSeconds: 60,
-  theme: "dark",
-  language: "ua",
+  theme: "system",
+  language: "en",
+  followSystemLanguage: true,
   allowDirect: false,
   showProxyCredentials: false,
   hideSecurityNotice: false,
@@ -316,9 +318,12 @@ function normalizeBrowserSettings(settings = {}) {
 function mergeSettings(data, p) {
   if (!p || typeof p !== "object" || Array.isArray(p))
     throw new Error(localeText.invalidSettings);
+  const appearance = { ...data.settings };
+  migrateAppearanceSettings(appearance);
   const next = {
     ...DEFAULT_SETTINGS,
     ...data.settings,
+    ...appearance,
     ...normalizeBrowserSettings(data.settings),
   };
   next.passwordLockMinutes =
@@ -328,6 +333,8 @@ function mergeSettings(data, p) {
       throw new Error(localeText.unknownSetting);
     next[key] = p[key];
   }
+  if (p.language !== undefined && p.followSystemLanguage !== true)
+    next.followSystemLanguage = false;
   if (p.autoLockMinutes !== undefined && p.passwordLockMinutes === undefined)
     next.passwordLockMinutes = p.autoLockMinutes;
   if (p.passwordLockMinutes !== undefined)
@@ -367,6 +374,7 @@ function mergeSettings(data, p) {
       throw new Error(localeText.invalidSettings);
   for (const key of [
     "browserSeparateSession",
+    "followSystemLanguage",
     "allowDirect",
     "showProxyCredentials",
     "hideSecurityNotice",

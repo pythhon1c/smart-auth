@@ -2,24 +2,32 @@
 const featuresLocale = window.SmartLocaleData;
 // Public preferences and explicit import/edit workflows. All parsing and storage
 // of authenticator secrets stays in the main process.
-function appearanceControls(onChange, disabled = false) {
-  const box = el("div", "appearance-controls"),
-    prefs = window.SmartI18n.preferences;
-  const language = select(
+function appLanguageSelect() {
+  const prefs = window.SmartI18n.preferences;
+  return select(
     [
+      ["system", featuresLocale.systemDefault],
       ["ua", featuresLocale.message_181bf51],
       ["en", "English"],
       ["ru", featuresLocale.message_5537fc8],
     ],
-    prefs.language,
+    prefs.followSystemLanguage ? "system" : prefs.language,
   );
-  const theme = select(
+}
+function appThemeSelect() {
+  return select(
     [
+      ["system", featuresLocale.systemDefault],
       ["dark", featuresLocale.dark],
       ["light", featuresLocale.light],
     ],
-    prefs.theme,
+    window.SmartI18n.preferences.theme,
   );
+}
+function appearanceControls(onChange, disabled = false) {
+  const box = el("div", "appearance-controls");
+  const language = appLanguageSelect(),
+    theme = appThemeSelect();
   field(box, featuresLocale.language, language);
   field(box, featuresLocale.theme, theme);
   const update = (value) => {
@@ -27,7 +35,8 @@ function appearanceControls(onChange, disabled = false) {
     onChange?.();
   };
   language.disabled = theme.disabled = disabled;
-  language.onchange = () => update({ language: language.value });
+  language.onchange = () =>
+    update(window.SmartI18n.languageChoice(language.value));
   theme.onchange = () => update({ theme: theme.value });
   return box;
 }
@@ -667,15 +676,18 @@ function importAccountsDialog() {
       featuresLocale.source,
       select(
         [
+          ["single", featuresLocale.oneMafile],
           ["files", featuresLocale.filesMaFileJSONTXTSteamsession],
           ["text", featuresLocale.oneAccountFromText],
           ["folder", featuresLocale.folderGroup],
         ],
-        "files",
+        "single",
       ),
     );
+    const formatOptions = el("div");
+    f.append(formatOptions);
     const format = field(
-      f,
+      formatOptions,
       featuresLocale.format,
       select(
         [
@@ -695,14 +707,14 @@ function importAccountsDialog() {
       if (format.value === "portable") portableImportDialog();
     };
     f.append(btn(featuresLocale.importSmartSDA, portableImportDialog));
-    f.append(
+    formatOptions.append(
       el(
         "p",
         "",
         featuresLocale.tradeBotsSystemOneJSONMultipleFilesOrAPackageFolderWithManifestJson,
       ),
     );
-    f.append(
+    formatOptions.append(
       el(
         "p",
         "",
@@ -720,8 +732,45 @@ function importAccountsDialog() {
         group,
       ),
     );
+    const allocationBox = el("div");
+    f.append(allocationBox);
+    const allocationOptions = proxyAllocationOptions(allocationBox, {
+      preserve: true,
+    });
+    const singleDetails = el("div");
+    const loginPassword = field(
+      singleDetails,
+      featuresLocale.optionalSteamPassword,
+      input("password"),
+    );
+    loginPassword.autocomplete = "off";
+    loginPassword.dataset.importPassword = "true";
+    const proxyText = field(
+      singleDetails,
+      featuresLocale.optionalDedicatedProxy,
+      input("text"),
+    );
+    proxyText.autocomplete = "off";
+    proxyText.spellcheck = false;
+    proxyText.dataset.sensitive = "true";
+    proxyText.dataset.importProxy = "true";
+    const proxyProtocol = field(
+      singleDetails,
+      featuresLocale.protocol,
+      select(
+        [
+          ["http", "HTTP"],
+          ["https", "HTTPS"],
+          ["socks5", "SOCKS5 (remote DNS)"],
+        ],
+        "http",
+      ),
+    );
+    proxyProtocol.dataset.importProxyProtocol = "true";
+    singleDetails.append(el("p", "", featuresLocale.singleImportDetailsHelp));
+    singleDetails.append(el("p", "", featuresLocale.singleImportProxyExamples));
+    f.insertBefore(singleDetails, formatOptions);
     const banOptions = importBanOptions(f);
-    const allocationOptions = proxyAllocationOptions(f, { preserve: true });
     const wrap = el("div"),
       text = el("textarea");
     text.rows = 8;
@@ -737,23 +786,39 @@ function importAccountsDialog() {
     f.append(wrap);
     wrap.hidden = true;
     mode.onchange = () => {
+      const single = mode.value === "single";
+      if (!single) loginPassword.value = proxyText.value = "";
+      singleDetails.hidden = !single;
+      formatOptions.hidden = allocationBox.hidden = single;
       wrap.hidden = mode.value !== "text";
       folder.disabled = mode.value === "folder";
     };
+    mode.onchange();
     footer(
       f,
       async () => {
         const generation = lockGeneration,
-          dialogGeneration = sensitiveDialogGeneration;
+          dialogGeneration = sensitiveDialogGeneration,
+          submittedMode = mode.value,
+          submittedAllocation =
+            submittedMode === "single" ? {} : allocationOptions();
         let preview;
         try {
           preview = await call("prepareAccountImport", {
             ...banOptions(),
-            mode: mode.value,
-            format: format.value,
-            groupId: mode.value === "folder" ? null : folder.value || null,
-            ...(mode.value === "text" ? { text: text.value } : {}),
+            mode: submittedMode,
+            format: submittedMode === "single" ? "sda" : format.value,
+            ...(submittedMode === "single"
+              ? {
+                  loginPassword: loginPassword.value,
+                  proxyText: proxyText.value,
+                  proxyProtocol: proxyProtocol.value,
+                }
+              : {}),
+            groupId: submittedMode === "folder" ? null : folder.value || null,
+            ...(submittedMode === "text" ? { text: text.value } : {}),
           });
+          loginPassword.value = proxyText.value = "";
         } finally {
           text.value = "";
         }
@@ -774,8 +839,8 @@ function importAccountsDialog() {
         }
         if (preview?.cancelled || preview?.canceled) return;
         if (preview.format === "tbs")
-          showPortableImportReview(preview, allocationOptions());
-        else showImportReview(preview, allocationOptions());
+          showPortableImportReview(preview, submittedAllocation);
+        else showImportReview(preview, submittedAllocation);
       },
       featuresLocale.reviewBeforeImport,
     );
@@ -785,6 +850,8 @@ function showImportReview(preview, allocationOptions = {}) {
   activeImportToken = preview.token;
   dialog(featuresLocale.importReview, (f) => {
     appendImportBanSummary(f, preview);
+    if (preview.hasDedicatedProxy)
+      f.append(el("p", "", featuresLocale.dedicatedProxyWillBeAssigned));
     const counts = preview.counts || {};
     f.append(
       el(
@@ -1499,6 +1566,113 @@ function banApiSettingsCard() {
   card.append(actions);
   return card;
 }
+function appUpdateSettingsCard() {
+  const card = el("section", "card app-update-settings"),
+    status = el("p", "", featuresLocale.appUpdateIdle),
+    versions = el("p", "muted"),
+    actions = el("div", "actions");
+  card.dataset.appUpdateSettings = "true";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  let state = "idle",
+    busy = false;
+  const generation = lockGeneration;
+  const active = () =>
+    !locked && generation === lockGeneration && card.isConnected;
+  const run = async (action) => {
+    if (busy || !active()) return;
+    busy = true;
+    status.className = "";
+    status.textContent = t(
+      action === "downloadAppUpdate"
+        ? featuresLocale.appUpdateDownloading
+        : action === "restartForAppUpdate"
+          ? featuresLocale.appUpdateRestarting
+          : featuresLocale.appUpdateChecking,
+    );
+    paint();
+    try {
+      const result = await call(action);
+      if (!active()) return;
+      if (result?.status === "error" || result?.state === "error") {
+        const reasons = {
+          UPDATE_EXISTING_FILE: featuresLocale.appUpdateFileConflict,
+          UPDATE_INTEGRITY: featuresLocale.appUpdateBadDownload,
+          UPDATE_BACKUP_FAILED: featuresLocale.appUpdateBackupFailed,
+        };
+        if (result.code === "UPDATE_INTEGRITY") state = "available";
+        status.className = "error";
+        status.textContent = t(reasons[result.code] || featuresLocale.appUpdateFailed);
+        return;
+      }
+      if (action === "restartForAppUpdate") {
+        if (result?.state !== "restarting" && result?.status !== "restarting")
+          throw new Error("Invalid restart result");
+        state = "restarting";
+        return;
+      }
+      if (!["current", "available", "ready"].includes(result?.state))
+        throw new Error("Invalid update result");
+      state = result.state;
+      versions.textContent = t(featuresLocale.appUpdateCurrentVersion).replace(
+        "{version}",
+        result.currentVersion || "—",
+      );
+      if (state !== "current" && result.version)
+        versions.textContent +=
+          " · " +
+          t(featuresLocale.appUpdateAvailableVersion).replace(
+            "{version}",
+            result.version,
+          );
+      status.textContent = t(
+        state === "current"
+          ? featuresLocale.appUpdateCurrent
+          : state === "ready"
+            ? featuresLocale.appUpdateReady
+            : featuresLocale.appUpdateAvailable,
+      );
+    } catch {
+      if (!active()) return;
+      status.className = "error";
+      status.textContent = t(featuresLocale.appUpdateFailed);
+    } finally {
+      busy = state === "restarting";
+      if (active()) paint();
+    }
+  };
+  const check = btn(featuresLocale.appUpdateCheck, () => run("checkAppUpdate")),
+    download = btn(
+      featuresLocale.appUpdateDownload,
+      () => run("downloadAppUpdate"),
+      "primary",
+    ),
+    restart = btn(
+      featuresLocale.appUpdateRestart,
+      () => run("restartForAppUpdate"),
+      "primary",
+    );
+  check.dataset.appUpdateCheck = "true";
+  download.dataset.appUpdateDownload = "true";
+  restart.dataset.appUpdateRestart = "true";
+  function paint() {
+    check.disabled = download.disabled = restart.disabled = busy;
+    download.hidden = state !== "available";
+    restart.hidden = state !== "ready";
+    card.setAttribute("aria-busy", String(busy));
+  }
+  actions.append(check, download, restart);
+  card.append(
+    el("h2", "", featuresLocale.appUpdates),
+    versions,
+    status,
+    el("p", "muted", featuresLocale.appUpdateStorageNote),
+    el("p", "muted", featuresLocale.appUpdateRestartNote),
+    actions,
+  );
+  paint();
+  return card;
+}
 function settingsPage(main) {
   header(
     main,
@@ -1511,26 +1685,9 @@ function settingsPage(main) {
   const language = field(
       appearance,
       featuresLocale.language,
-      select(
-        [
-          ["ua", featuresLocale.message_181bf51],
-          ["en", "English"],
-          ["ru", featuresLocale.message_5537fc8],
-        ],
-        window.SmartI18n.preferences.language,
-      ),
+      appLanguageSelect(),
     ),
-    theme = field(
-      appearance,
-      featuresLocale.theme,
-      select(
-        [
-          ["dark", featuresLocale.dark],
-          ["light", featuresLocale.light],
-        ],
-        window.SmartI18n.preferences.theme,
-      ),
-    );
+    theme = field(appearance, featuresLocale.theme, appThemeSelect());
   const perPage = field(
     appearance,
     featuresLocale.accountsPerPage,
@@ -2000,7 +2157,7 @@ function settingsPage(main) {
     passwordLockMinutes: Number(passwordTimeout.value),
     accountsPerPage: Number(perPage.value),
     theme: theme.value,
-    language: language.value,
+    ...window.SmartI18n.languageChoice(language.value),
     allowDirect: direct.input.checked,
     showProxyCredentials: showProxyCredentials.input.checked,
     hideSecurityNotice: hideSecurityNotice.input.checked,
@@ -2054,6 +2211,7 @@ function settingsPage(main) {
     browser,
     steamAdminsSettingsCard(),
     banApiSettingsCard(),
+    appUpdateSettingsCard(),
   );
   // Keep each label and its control together as cards reflow.
   layout.querySelectorAll("label[for]").forEach((caption) => {

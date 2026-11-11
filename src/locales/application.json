@@ -1,4 +1,7 @@
 {
+  "singleMafileRequired": "Виберіть рівно один файл .maFile з одним акаунтом.",
+  "invalidImportPassword": "Пароль Steam має містити не більше 4096 символів без перенесення рядків.",
+  "singleAccountDetailsOnly": "Окремий пароль та проксі доступні лише для імпорту одного .maFile.",
   "unknownAction": "Невідома дія.",
   "vaultLocked": "Сховище заблоковано.",
   "message": "Некоректний стан блокувань Steam.",

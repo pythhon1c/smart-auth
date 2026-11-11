@@ -55,6 +55,33 @@ function accountProxyOptions(data, { id, listId } = {}) {
   };
 }
 
+function parseManualProxy(url, protocol = "http") {
+  if (
+    typeof url !== "string" ||
+    url.length > 2048 ||
+    /[\r\n]/.test(url) ||
+    !["http", "https", "socks5"].includes(protocol)
+  )
+    throw Error(localeText.enterOneProxyInASupportedFormat);
+  const parsed = prepareProxies({ text: url, protocol });
+  if (
+    parsed.errors.length ||
+    parsed.lists.length !== 1 ||
+    parsed.lists[0].proxies.length !== 1
+  )
+    throw Error(localeText.enterOneProxyInASupportedFormat);
+  return parsed.lists[0].proxies[0].url;
+}
+function ensureManualProxy(data, url) {
+  const existing = data.proxies.find((proxy) => proxy.url === url);
+  if (existing) return existing.id;
+  return model.saveProxy(
+    data,
+    { url, name: proxyEndpoint(url).slice(0, 120) },
+    true,
+  );
+}
+
 function planAccountProxy(source, p) {
   if (
     !p ||
@@ -79,30 +106,7 @@ function planAccountProxy(source, p) {
       );
     proxyId = p.proxyId;
   } else {
-    if (
-      typeof p.url !== "string" ||
-      p.url.length > 2048 ||
-      /[\r\n]/.test(p.url)
-    )
-      throw Error(localeText.enterOneProxyInASupportedFormat);
-    const parsed = prepareProxies({
-      text: p.url,
-      protocol: p.protocol || "http",
-    });
-    if (
-      parsed.errors.length ||
-      parsed.lists.length !== 1 ||
-      parsed.lists[0].proxies.length !== 1
-    )
-      throw Error(localeText.enterOneProxyInASupportedFormat);
-    const url = parsed.lists[0].proxies[0].url;
-    proxyId = data.proxies.find((proxy) => proxy.url === url)?.id;
-    if (!proxyId)
-      proxyId = model.saveProxy(
-        data,
-        { url, name: proxyEndpoint(url).slice(0, 120) },
-        true,
-      );
+    proxyId = ensureManualProxy(data, parseManualProxy(p.url, p.protocol));
   }
   const proxyIds = [
     ...new Set(
@@ -116,4 +120,9 @@ function planAccountProxy(source, p) {
   delete account.proxyAllocation;
   return { data, proxyId };
 }
-module.exports = { accountProxyOptions, planAccountProxy };
+module.exports = {
+  accountProxyOptions,
+  planAccountProxy,
+  parseManualProxy,
+  ensureManualProxy,
+};

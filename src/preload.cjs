@@ -60,6 +60,9 @@ function notificationPayload(value) {
   return result;
 }
 const actions = new Set([
+  "checkAppUpdate",
+  "downloadAppUpdate",
+  "restartForAppUpdate",
   "status",
   "showUnlock",
   "lockedReady",

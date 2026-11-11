@@ -1,25 +1,37 @@
 # smart-auth user guide
 
-**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.2 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
+**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.3 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
 
-This guide covers **0.14.4-beta.2**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
+This guide covers **0.14.4-beta.3**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
 
 Use is free of charge for personal and internal business purposes. Modifying, forking or redistributing smart-auth requires the author's prior written permission, subject to applicable law, third-party licenses and platform rights. See [LICENSE](../LICENSE) for complete terms.
 
 ## First launch and access
 
-1. Run `smart-auth-0.14.4-beta.2-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
+Windows SmartScreen may show **Unknown publisher** for this unsigned beta. Use the project's [GitHub release](https://github.com/pythhon1c/smart-auth/releases/tag/v0.14.4-beta.3) and compare the EXE's SHA-256 with the same filename in `SHA256SUMS.txt` before deciding whether to run it. See [how to verify the download](BUILD.md#verify-a-downloaded-release).
+
+1. Run `smart-auth-0.14.4-beta.3-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
 2. Enter and repeat a unique vault password of at least **15 characters**, then create the vault. On subsequent launches, enter the password to unlock it. This password is separate from your Steam passwords.
-3. Choose your preferred appearance in Settings. Optionally configure login TOTP and a 6-12 digit PIN for the current open session.
+3. The interface starts in the Windows display language for Ukrainian or Russian and in English for other languages. Its colors follow the Windows app theme. You can select a fixed language or theme on the sign-in screen or in Settings. Optionally configure login TOTP and a 6-12 digit PIN for the current open session.
 4. Create an encrypted vault backup after setup and important changes. Keep its access credentials and recovery materials separately.
 
 The PIN cannot open the vault after an application restart. Default inactivity timeouts are 2 minutes for PIN lock and 10 minutes for password lock. Configure them independently; `0` disables the corresponding timer. Five incorrect PIN attempts require primary authentication. If login TOTP is enabled, provide the required fresh code alongside the configured access credentials. A previously accepted code cannot be reused within the same time step.
 
 **Locking hides the interface while retaining the working key in memory.** Account browsers close and application windows hide private content. Already running Loot, its retries, and configured background confirmations or acceptance can continue. New scheduled Loot runs wait for unlock. Use the application's full Exit action to stop work and release keys accessible to the application. If hiding to the system tray is enabled, closing the main window may only hide it.
 
+## Update from GitHub
+
+Open **Settings → Updates** and check for a newer Windows build. Choose **Download update** to save it in the `smart-auth-updates` folder under your Windows Downloads directory. The app verifies the size and SHA-256 published with the official release. Downloading does not interrupt the running application.
+
+When you are ready to close the app and its active tasks, choose the restart option. smart-auth checks the downloaded file again, saves the encrypted vault, and creates a separate recovery copy under `update-backups` in the current application-data folder. If verification or backup fails, the running version stays open. The new build uses the same data folder for accounts, vault contents and browser profiles. The backup covers the encrypted vault; browser profiles stay in their existing folders.
+
+The previous portable EXE remains available. For subsequent manual launches, use the newer EXE in Downloads or update your shortcut. Older releases without the updater need a one-time manual download. A matching hash checks that the file matches the release asset. Windows can still show SmartScreen for an unsigned build.
+
 ## Import Steam accounts
 
 Open Import, select a format, and choose pasted text, one or more files, or a folder. Review the summary, warnings, destination folder, and duplicate policy before applying the import. Cancel discards the prepared changes.
+
+For a single authenticator file, choose **One .maFile** as the source. Enter the optional Steam password and an optional individual proxy, select the destination folder, then choose the file and review the import. Proxy examples include `host:port:login:password` and `http://login:password@host:port`. Choose the matching protocol for an address without a scheme. The individual proxy belongs to that account. Leaving it blank uses the folder's configured allocation rules. Leaving the password blank preserves a compatible password supplied by the file.
 
 Supported inputs include:
 

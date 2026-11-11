@@ -3,6 +3,10 @@ const localeText = require("../locales/application.json");
 // Pure drafts for account/group mutations. The main process owns consent,
 // freshness, persistence, network invalidation and private import lifetimes.
 const model = require("./model.cjs");
+const {
+  parseManualProxy,
+  ensureManualProxy,
+} = require("./account-proxies.cjs");
 const { planAccountImport } = require("./account-import.cjs");
 const { planPortableImport } = require("./portable-import.cjs");
 const { assertTradeBotsAssociations } = require("./trade-bots-adapter.cjs");
@@ -156,8 +160,24 @@ function stageMutation(source, action, p, prepared = null) {
         a.proxyListIds ||= [];
         model.restoreConfirmationHistory(data, a);
       }
-      overrideImportedRoutes(data, accounts, p, groups ? groupId : null);
+      if (!prepared.singleAccount)
+        overrideImportedRoutes(data, accounts, p, groups ? groupId : null);
       data.accounts.push(...accounts);
+      if (
+        prepared.singleAccount &&
+        prepared.dedicatedProxy &&
+        accounts.length
+      ) {
+        if (accounts.length !== 1) throw Error(localeText.singleMafileRequired);
+        const url = parseManualProxy(prepared.dedicatedProxy.url);
+        const proxyId = ensureManualProxy(data, url);
+        Object.assign(accounts[0], {
+          proxyIds: [proxyId],
+          proxyListIds: [],
+          inheritProxy: false,
+        });
+        delete accounts[0].proxyAllocation;
+      }
       for (const update of plan.updates)
         model.item(data.accounts, update.id, localeText.account).loginPassword =
           update.loginPassword;

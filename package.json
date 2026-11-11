@@ -1,6 +1,6 @@
 {
   "name": "smart-auth",
-  "version": "0.14.4-beta.2",
+  "version": "0.14.4-beta.3",
   "description": "Windows Steam authenticator with encrypted storage, per-account proxies and trade automation",
   "main": "src/main.cjs",
   "author": "smart-auth",

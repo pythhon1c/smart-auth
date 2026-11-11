@@ -1,4 +1,8 @@
 "use strict";
+const {
+  detectSystemLanguage,
+  resolveAppearanceLanguage,
+} = require("./core/appearance-settings.cjs");
 const localeText = require("./locales/application.json");
 const preloadLocaleArgument =
   "--smart-sda-preload-locale=" +
@@ -18,6 +22,7 @@ const {
   Notification,
   clipboard,
   nativeImage,
+  nativeTheme,
   Tray,
   Menu,
   shell,
@@ -34,6 +39,42 @@ const { setTimeout, clearTimeout } = require("node:timers");
 const { idleLockAction } = require("./core/idle-lock.cjs");
 const { Vault } = require("./core/vault.cjs");
 const { atomicVaultBackup } = require("./core/vault-backup.cjs");
+const { UpdateController } = require("./core/update-controller.cjs");
+const { ReleaseUpdater } = require("./core/release-updater.cjs");
+let appUpdateController;
+function runAppUpdate(action) {
+  const captured = epoch;
+  if (!appUpdateController) {
+    const downloadDirectory = path.join(
+      app.getPath("downloads"),
+      "smart-auth-updates",
+    );
+    let updater;
+    const release = () =>
+      (updater ||= new ReleaseUpdater({
+        currentVersion: app.getVersion(),
+        directory: downloadDirectory,
+      }));
+    appUpdateController = new UpdateController({
+      updater: {
+        check: () => release().check(),
+        download: () => release().download(),
+        verifyReady: () => release().verifyReady(),
+      },
+      downloadDirectory,
+      userData: app.getPath("userData"),
+      version: app.getVersion(),
+      packaged: () => app.isPackaged,
+      vault,
+      relaunch: (options) => app.relaunch(options),
+      quit: () => app.quit(),
+    });
+  }
+  return appUpdateController.run(
+    action,
+    () => epoch === captured && !uiUnavailable(),
+  );
+}
 const { ProxyTransport } = require("./core/transport.cjs");
 const { NetworkScheduler } = require("./core/network-scheduler.cjs");
 const { runTaskPool } = require("./core/task-pool.cjs");
@@ -67,7 +108,12 @@ const { dueAccountActions } = require("./core/account-policy.cjs");
 const { browserActionUrl } = require("./core/browser-actions.cjs");
 const model = require("./core/model.cjs");
 const imports = require("./core/imports.cjs");
-const { planAccountImport, hasPassword } = require("./core/account-import.cjs");
+const {
+  planAccountImport,
+  hasPassword,
+  singleImportDetails,
+  prepareSingleAccountImport,
+} = require("./core/account-import.cjs");
 const {
   normalizeImportBanOptions,
   filterAccountImportBans,
@@ -101,7 +147,9 @@ const {
 const QRCode = require("qrcode");
 const { BrowserSessions } = require("./core/browser-sessions.cjs");
 const { BrowserRuntimeInstaller } = require("./core/browser-runtime.cjs");
-const { BrowserRuntimeController } = require("./core/browser-runtime-controller.cjs");
+const {
+  BrowserRuntimeController,
+} = require("./core/browser-runtime-controller.cjs");
 const browserRuntimeManifest = require("./core/browser-runtime.json");
 const { planBrowserProfiles } = require("./core/browser-profile-plans.cjs");
 const {
@@ -126,6 +174,7 @@ app.commandLine.appendSwitch(
   "disable_non_proxied_udp",
 );
 
+let systemLanguage = "en";
 let win,
   vault,
   transport,
@@ -164,7 +213,7 @@ let win,
   generatedSecretTimer = null,
   proxyCheck = null,
   trayController = null,
-  trayPreferences = { trayEnabled: true, language: "ua" },
+  trayPreferences = { trayEnabled: true, followSystemLanguage: true },
   pendingTrayReview = null;
 const { AsyncLocalStorage } = require("node:async_hooks");
 const uiRequests = new AsyncLocalStorage();
@@ -175,11 +224,18 @@ let uiLocked = false,
 const lockAcknowledged = new Map(),
   showAfterLock = new Set();
 const secretClipboard = new SecretClipboard(clipboard);
+function windowBackground(theme = "system") {
+  const dark =
+    theme === "dark" ||
+    (theme === "system" && nativeTheme?.shouldUseDarkColors === true);
+  return dark ? "#171a21" : "#eef2f6";
+}
 function uiStatus() {
   const status = vault?.status() || { locked: true, lockMode: "password" };
   const locked = status.locked || uiLocked;
   return {
     ...status,
+    systemLanguage: systemLanguage,
     beta: /-beta\.\d+$/.test(app.getVersion()),
     locked,
     lockMode: locked
@@ -429,6 +485,7 @@ function updateTray() {
         hasSharedSecret: Boolean(a.mafile?.shared_secret),
       }));
   }
+  resolveAppearanceLanguage(trayPreferences, systemLanguage);
   trayController.update({ locked, settings: trayPreferences, accounts });
 }
 function queueTrayReview({ ids, kind }) {
@@ -713,10 +770,13 @@ function stopBrowsers() {
   } catch {}
 }
 function getBrowserRuntime() {
-  if (!browserRuntime) browserRuntime = new BrowserRuntimeController({
-    installer: new BrowserRuntimeInstaller({ root: path.join(app.getPath("userData"), "browser-runtime") }),
-    manifest: browserRuntimeManifest,
-  });
+  if (!browserRuntime)
+    browserRuntime = new BrowserRuntimeController({
+      installer: new BrowserRuntimeInstaller({
+        root: path.join(app.getPath("userData"), "browser-runtime"),
+      }),
+      manifest: browserRuntimeManifest,
+    });
   return browserRuntime;
 }
 async function getBrowsers() {
@@ -1683,7 +1743,11 @@ async function chooseImportPaths(mode, title, extensions) {
   const result = await dialog.showOpenDialog(win, {
     title,
     properties:
-      mode === "folder" ? ["openDirectory"] : ["openFile", "multiSelections"],
+      mode === "folder"
+        ? ["openDirectory"]
+        : mode === "single"
+          ? ["openFile"]
+          : ["openFile", "multiSelections"],
     ...(mode === "folder" ? {} : { filters: [{ name: "Import", extensions }] }),
   });
   if (epoch !== captured || uiUnavailable())
@@ -1960,6 +2024,16 @@ function enforceIdleLock() {
 async function dispatch(action, p) {
   checkInput(action, p);
   enforceIdleLock();
+  if (
+    ["checkAppUpdate", "downloadAppUpdate", "restartForAppUpdate"].includes(
+      action,
+    )
+  ) {
+    assertUiAccess();
+    if (Object.keys(p).length)
+      return { state: "error", code: "UPDATE_INVALID_REQUEST" };
+    return runAppUpdate(action);
+  }
   if (action === "status") return uiStatus();
   if (action === "createVault") {
     if (typeof p.password !== "string" || [...p.password].length < 15)
@@ -2190,7 +2264,10 @@ async function dispatch(action, p) {
         chrome: "https://www.google.com/chrome/terms/",
         google: "https://policies.google.com/terms",
       };
-      if (!Object.hasOwn(urls, p.kind) || Object.keys(p).some((key) => key !== "kind"))
+      if (
+        !Object.hasOwn(urls, p.kind) ||
+        Object.keys(p).some((key) => key !== "kind")
+      )
         throw Error(localeText.invalidRequest);
       await shell.openExternal(urls[p.kind]);
       return { opened: true };
@@ -2493,7 +2570,8 @@ async function dispatch(action, p) {
     case "prepareAccountImport": {
       const banOptions = normalizeImportBanOptions(p);
       const capturedImportEpoch = epoch;
-      if (!["files", "folder", "text"].includes(p.mode))
+      const singleDetails = singleImportDetails(p);
+      if (!["files", "folder", "text", "single"].includes(p.mode))
         throw new Error(localeText.unknownImportMode);
       if (p.groupId) model.item(data.groups, p.groupId, localeText.folder);
       clearAllocationFor("commitAccountImport");
@@ -2510,18 +2588,17 @@ async function dispatch(action, p) {
       const paths =
         p.mode === "text"
           ? undefined
-          : await chooseImportPaths(p.mode, localeText.importAccounts, [
-              "maFile",
-              "mafile",
-              "json",
-              "txt",
-              "info",
-              "steamsession",
-            ]);
+          : await chooseImportPaths(
+              p.mode,
+              localeText.importAccounts,
+              p.mode === "single"
+                ? ["maFile", "mafile"]
+                : ["maFile", "mafile", "json", "txt", "info", "steamsession"],
+            );
       if (importTicket !== importGeneration)
         throw new Error(localeText.operationCancelled);
       if (paths === null) return { cancelled: true };
-      if (p.format === "tbs") {
+      if (p.format === "tbs" && p.mode !== "single") {
         clearAllocationFor("commitPortableImport");
         const tbsPortableGeneration = ++portableGeneration;
         pendingPortable = null;
@@ -2584,12 +2661,14 @@ async function dispatch(action, p) {
           banFilter: filtered.banFilter,
         };
       }
-      const prepared = imports.prepareAccounts({
-        paths,
-        text: p.text,
-        format: p.format || "auto",
-        mode: p.mode,
-      });
+      const prepared = singleDetails
+        ? prepareSingleAccountImport(paths, singleDetails)
+        : imports.prepareAccounts({
+            paths,
+            text: p.text,
+            format: p.format || "auto",
+            mode: p.mode,
+          });
       const candidates = planAccountImport(data, prepared).rows.map(
         (row) => row.account,
       );
@@ -2617,6 +2696,8 @@ async function dispatch(action, p) {
         token,
         epoch,
         input: prepared,
+        singleAccount: Boolean(singleDetails),
+        dedicatedProxy: singleDetails?.dedicatedProxy || null,
         banOptions,
         bansBySteamId,
         groupId: p.groupId || null,
@@ -2625,6 +2706,10 @@ async function dispatch(action, p) {
       };
       return {
         token,
+        singleAccount: Boolean(singleDetails),
+        hasDedicatedProxy: Boolean(
+          singleDetails?.dedicatedProxy && plan.counts.ready,
+        ),
         accounts: rows.map(
           ({
             account,
@@ -2914,7 +2999,10 @@ async function dispatch(action, p) {
       return status;
     }
     case "settings": {
-      const next = model.mergeSettings(data, p);
+      const next = resolveAppearanceLanguage(
+        model.mergeSettings(data, p),
+        systemLanguage,
+      );
       const routeChanged = next.allowDirect !== data.settings.allowDirect;
       const previousBrowser = model.normalizeBrowserSettings(data.settings);
       const browserChanged =
@@ -3592,8 +3680,7 @@ async function openLoot(schemeId) {
     minWidth: 420,
     minHeight: 500,
     show: false,
-    backgroundColor:
-      unlocked().settings.theme === "light" ? "#eef2f6" : "#171a21",
+    backgroundColor: windowBackground(unlocked().settings.theme),
     title: "smart-auth · " + (scheme?.name || "Loot"),
     icon: appIconPath,
     autoHideMenuBar: true,
@@ -3718,8 +3805,7 @@ async function openPasswordManager() {
     minWidth: 540,
     minHeight: 500,
     show: false,
-    backgroundColor:
-      unlocked().settings.theme === "light" ? "#eef2f6" : "#171a21",
+    backgroundColor: windowBackground(unlocked().settings.theme),
     title: "smart-auth · Password manager",
     icon: appIconPath,
     autoHideMenuBar: true,
@@ -3841,8 +3927,7 @@ async function openAuthenticator() {
     minWidth: 540,
     minHeight: 500,
     show: false,
-    backgroundColor:
-      unlocked().settings.theme === "light" ? "#eef2f6" : "#171a21",
+    backgroundColor: windowBackground(unlocked().settings.theme),
     title: "2fa (not steam)",
     icon: appIconPath,
     autoHideMenuBar: true,
@@ -3954,7 +4039,7 @@ async function createWindow() {
     height: 860,
     minWidth: 380,
     minHeight: 500,
-    backgroundColor: "#171a21",
+    backgroundColor: windowBackground(),
     title: `smart-auth ${app.getVersion()}`,
     icon: appIconPath,
     autoHideMenuBar: true,
@@ -4048,9 +4133,11 @@ else {
   app
     .whenReady()
     .then(async () => {
+      systemLanguage = detectSystemLanguage(app);
       if (process.platform === "win32")
         app.setAppUserModelId("app.smartsda.desktop");
       vault = new Vault(path.join(app.getPath("userData"), "smart-sda.vault"), {
+        systemLanguage: () => systemLanguage,
         protectKey: (text) => {
           if (!safeStorage.isEncryptionAvailable())
             throw new Error(localeText.windowsProtectionIsUnavailable);

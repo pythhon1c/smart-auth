@@ -34,6 +34,14 @@ const lootLocale = window.SmartLocaleData;
     refreshPending = false,
     refreshTimer = null,
     refreshLockEpoch = 0;
+  const systemColors = window.matchMedia("(prefers-color-scheme: dark)");
+  let selectedTheme = "system";
+  function applyTheme() {
+    document.documentElement.dataset.theme =
+      selectedTheme === "system" ? (systemColors.matches ? "dark" : "light") : selectedTheme;
+  }
+  systemColors.addEventListener("change", applyTheme);
+  applyTheme();
   const el = (tag, cls = "", text) => {
     const node = document.createElement(tag);
     node.className = cls;
@@ -1519,8 +1527,8 @@ const lootLocale = window.SmartLocaleData;
         data.settings?.language === "ua"
           ? "uk"
           : data.settings?.language || "en";
-      document.documentElement.dataset.theme =
-        data.settings?.theme === "light" ? "light" : "dark";
+      if (data.settings?.theme) selectedTheme = data.settings.theme;
+      applyTheme();
       if (data.locked) {
         showLocked(data);
       } else if (!draft || wasLocked) {
@@ -1580,6 +1588,7 @@ const lootLocale = window.SmartLocaleData;
   }, 3000);
   window.addEventListener("beforeunload", () => {
     disposed = true;
+    systemColors.removeEventListener("change", applyTheme);
     generation++;
     clearInterval(timer);
     clearTimeout(refreshTimer);

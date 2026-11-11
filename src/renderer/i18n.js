@@ -2,21 +2,30 @@
 const i18nLocale = window.SmartLocaleData;
 // Only public appearance preferences persist outside the encrypted vault.
 window.SmartI18n = (() => {
-  let preferences = { language: "ua", theme: "dark" };
+  const locale = window.navigator?.language?.toLowerCase().split("-")[0];
+  let systemLanguage = locale === "uk" ? "ua" : locale === "ru" ? "ru" : "en";
+  const systemColors = window.matchMedia?.("(prefers-color-scheme: dark)");
+  const preferences = { language: systemLanguage, followSystemLanguage: true, theme: "system" };
   try {
     const saved = JSON.parse(
       localStorage.getItem("smart-sda-appearance") || "{}",
     );
-    if (["ua", "en", "ru"].includes(saved.language))
+    const legacy = typeof saved.followSystemLanguage !== "boolean";
+    preferences.followSystemLanguage = legacy
+      ? !["en", "ru"].includes(saved.language)
+      : saved.followSystemLanguage;
+    if (!preferences.followSystemLanguage && ["ua", "en", "ru"].includes(saved.language))
       preferences.language = saved.language;
-    if (["dark", "light"].includes(saved.theme))
+    if (["dark", "light", "system"].includes(saved.theme) && !(legacy && saved.theme === "dark"))
       preferences.theme = saved.theme;
   } catch {}
   const appearanceKeys = (next) => {
     const valid = {};
-    if (["ua", "en", "ru"].includes(next?.language))
+    if (["ua", "en", "ru"].includes(next?.language)) {
       valid.language = next.language;
-    if (["dark", "light"].includes(next?.theme)) valid.theme = next.theme;
+      valid.followSystemLanguage = next.followSystemLanguage === true;
+    }
+    if (["dark", "light", "system"].includes(next?.theme)) valid.theme = next.theme;
     return valid;
   };
   let pendingPreferences = {};
@@ -36,7 +45,7 @@ window.SmartI18n = (() => {
     } catch {}
   }
   const dictionary = new Map();
-  const entries = `${i18nLocale.translationTable_9b39cee}\n${i18nLocale.browserRuntimeTranslations}\n${i18nLocale.betaTranslations}`;
+  const entries = `${i18nLocale.translationTable_9b39cee}\n${i18nLocale.browserRuntimeTranslations}\n${i18nLocale.betaTranslations}\n${i18nLocale.singleImportTranslations}\n${i18nLocale.appUpdateTranslations}`;
   for (const line of entries.split("\n")) {
     const [ua, en, ru] = line.split("|");
     dictionary.set(ua, { ua, en, ru });
@@ -159,13 +168,23 @@ window.SmartI18n = (() => {
       preferences.language === "en" ? " ms" : i18nLocale.message_5160aea,
     );
   }
+  function paintTheme() {
+    document.documentElement.dataset.theme = preferences.theme === "system"
+      ? (systemColors?.matches ? "dark" : "light")
+      : preferences.theme;
+  }
+  systemColors?.addEventListener("change", paintTheme);
+  function languageChoice(value) {
+    return value === "system"
+      ? { language: systemLanguage, followSystemLanguage: true }
+      : { language: value, followSystemLanguage: false };
+  }
   function apply(next = {}) {
-    if (["ua", "en", "ru"].includes(next.language))
-      preferences.language = next.language;
-    if (["dark", "light"].includes(next.theme)) preferences.theme = next.theme;
+    Object.assign(preferences, appearanceKeys(next));
+    if (preferences.followSystemLanguage) preferences.language = systemLanguage;
     document.documentElement.lang =
       preferences.language === "ua" ? "uk" : preferences.language;
-    document.documentElement.dataset.theme = preferences.theme;
+    paintTheme();
     try {
       localStorage.setItem("smart-sda-appearance", JSON.stringify(preferences));
     } catch {}
@@ -174,6 +193,16 @@ window.SmartI18n = (() => {
   return {
     t,
     apply,
+    languageChoice,
+    setSystemLanguage(value) {
+      if (!["ua", "en", "ru"].includes(value) || value === systemLanguage) return;
+      systemLanguage = value;
+      if (pendingPreferences.followSystemLanguage) {
+        pendingPreferences.language = value;
+        savePending();
+      }
+      apply();
+    },
     choose(next) {
       Object.assign(pendingPreferences, appearanceKeys(next));
       savePending();

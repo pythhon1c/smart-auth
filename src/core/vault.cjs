@@ -1,4 +1,8 @@
 "use strict";
+const {
+  migrateAppearanceSettings,
+  resolveAppearanceLanguage,
+} = require("./appearance-settings.cjs");
 const localeText = require("../locales/application.json");
 
 const fs = require("node:fs");
@@ -39,8 +43,9 @@ const DEFAULT_SETTINGS = {
   pinLockMinutes: 2,
   passwordLockMinutes: 10,
   pollSeconds: 60,
-  theme: "dark",
-  language: "ua",
+  theme: "system",
+  language: "en",
+  followSystemLanguage: true,
   allowDirect: false,
   showProxyCredentials: false,
   hideSecurityNotice: false,
@@ -69,7 +74,7 @@ const DEFAULT_SETTINGS = {
   browserExtensions: [],
 };
 function migrateData(data) {
-  let changed = false;
+  let changed = migrateAppearanceSettings(data.settings);
   if (
     data.banApiKey !== undefined &&
     data.banApiKey !== "" &&
@@ -319,7 +324,11 @@ function scrub(value) {
 }
 
 class Vault {
-  constructor(filePath, { protectKey, unprotectKey } = {}) {
+  constructor(
+    filePath,
+    { protectKey, unprotectKey, systemLanguage = () => "en" } = {},
+  ) {
+    this.systemLanguage = systemLanguage;
     this.filePath = filePath;
     this.protectKey = protectKey;
     this.unprotectKey = unprotectKey;
@@ -495,7 +504,10 @@ class Vault {
           groups: [],
           proxies: [],
           proxyLists: [],
-          settings: structuredClone(DEFAULT_SETTINGS),
+          settings: resolveAppearanceLanguage(
+            structuredClone(DEFAULT_SETTINGS),
+            this.systemLanguage(),
+          ),
           audit: [],
         },
         security: { totpSecret: null, lastStep: -1 },
@@ -731,6 +743,10 @@ class Vault {
   }
   getData() {
     this._guard();
+    resolveAppearanceLanguage(
+      this._payload.data.settings,
+      this.systemLanguage(),
+    );
     return this._payload.data;
   }
   save() {

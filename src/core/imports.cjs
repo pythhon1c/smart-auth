@@ -79,7 +79,7 @@ function readJson(text) {
     return value;
   });
 }
-function collect(paths, text, extensions) {
+function collect(paths, text, extensions, filesOnly = false) {
   const files = [],
     errors = [];
   let total = 0,
@@ -107,6 +107,10 @@ function collect(paths, text, extensions) {
       return;
     }
     if (st.isDirectory()) {
+      if (filesOnly) {
+        reject(source, localeText.singleMafileRequired);
+        return;
+      }
       let children;
       try {
         children = fs
@@ -309,7 +313,22 @@ function normalize(record, associated) {
     !!account.mafile.identity_secret && !!account.mafile.device_id;
   return account;
 }
-function prepareAccounts({ paths, text, format = "auto", mode = "auto" } = {}) {
+function prepareAccounts({
+  paths,
+  text,
+  format = "auto",
+  mode = "auto",
+  singleMafile = false,
+} = {}) {
+  if (
+    singleMafile &&
+    (!Array.isArray(paths) ||
+      paths.length !== 1 ||
+      typeof paths[0] !== "string" ||
+      path.extname(paths[0]).toLowerCase() !== ".mafile" ||
+      text !== undefined)
+  )
+    throw Error(localeText.singleMafileRequired);
   format = String(format).toLowerCase();
   if (!FORMATS.has(format)) throw Error(localeText.unsupportedImportFormat);
   if (
@@ -322,6 +341,7 @@ function prepareAccounts({ paths, text, format = "auto", mode = "auto" } = {}) {
     paths,
     text,
     new Set([".json", ".mafile", ".txt", ".info", ".steamsession"]),
+    singleMafile,
   );
   const all = [];
   const candidates = [];
@@ -329,6 +349,8 @@ function prepareAccounts({ paths, text, format = "auto", mode = "auto" } = {}) {
   for (const file of input.files) {
     try {
       const parsed = readJson(file.text);
+      if (singleMafile && recordKind(parsed) !== "mafile")
+        throw Error("single");
       let values;
       try {
         values = records(parsed);

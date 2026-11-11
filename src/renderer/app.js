@@ -580,6 +580,7 @@ async function boot() {
   try {
     const s = await call("status");
     if (generation !== lockGeneration) return;
+    window.SmartI18n.setSystemLanguage(s.systemLanguage);
     locked = s.locked || !s.exists;
     if (locked) auth(s);
     else await refresh();
