@@ -1,16 +1,16 @@
 # smart-auth user guide
 
-**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.4 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
+**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.5 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
 
-This guide covers **0.14.4-beta.4**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
+This guide covers **0.14.4-beta.5**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
 
 Use is free of charge for personal and internal business purposes. Modifying, forking or redistributing smart-auth requires the author's prior written permission, subject to applicable law, third-party licenses and platform rights. See [LICENSE](../LICENSE) for complete terms.
 
 ## First launch and access
 
-Windows SmartScreen may show **Unknown publisher** for this unsigned beta. Use the project's [GitHub release](https://github.com/pythhon1c/smart-auth/releases/tag/v0.14.4-beta.4) and compare the EXE's SHA-256 with the same filename in `SHA256SUMS.txt` before deciding whether to run it. See [how to verify the download](BUILD.md#verify-a-downloaded-release).
+Windows SmartScreen may show **Unknown publisher** for this unsigned beta. Use the project's [GitHub release](https://github.com/pythhon1c/smart-auth/releases/tag/v0.14.4-beta.5) and compare the EXE's SHA-256 with the same filename in `SHA256SUMS.txt` before deciding whether to run it. See [how to verify the download](BUILD.md#verify-a-downloaded-release).
 
-1. Run `smart-auth-0.14.4-beta.4-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
+1. Run `smart-auth-0.14.4-beta.5-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
 2. Enter and repeat a unique vault password of at least **15 characters**, then create the vault. On subsequent launches, enter the password to unlock it. This password is separate from your Steam passwords.
 3. The interface starts in the Windows display language for Ukrainian or Russian and in English for other languages. Its colors follow the Windows app theme. You can select a fixed language or theme on the sign-in screen or in Settings. Optionally configure login TOTP and a 6-12 digit PIN for the current open session.
 4. Create an encrypted vault backup after setup and important changes. Keep its access credentials and recovery materials separately.
@@ -43,7 +43,7 @@ Supported inputs include:
 - **Trade Bots System v1** JSON/TXT or an unpacked package folder. Select the root containing `manifest.json` to preserve package proxy assignments.
 - Steam password lists in `login:password` form, which enrich uniquely matched accounts. Password lists alone do not create authenticators. Supported four-field account exports discard the email password.
 
-Unpack ZIP archives before importing. Encrypted SDA maFiles/manifests and third-party vaults must first be exported in a supported form using their original application. smart-auth does not decrypt those vendor formats or accept arbitrary browser-extension databases.
+For account imports, unpack ZIP archives before importing. Encrypted SDA maFiles/manifests and third-party vaults must first be exported in a supported form using their original application. smart-auth does not decrypt those vendor formats or accept arbitrary browser-extension databases.
 
 Confirmations require the original `identity_secret` and enrolled `device_id`. An import without the necessary enrolled-device data may only generate offline codes; the app shows its limitations and does not invent a device ID. A TBS record without authenticator secrets cannot generate Steam Guard codes. A stored token does not prove that authentication is valid.
 
@@ -80,6 +80,16 @@ Open the browser from an account or for selected accounts. First use shows the p
 The independent browser web session is enabled by default. Its first sign-in needs a saved Steam password. Valid web tokens are reused without overwriting the mobile authenticator session. Additional Steam challenges are not bypassed. Independent web-session mode and authenticator-session mode have separate persistent browser directories. Changing relevant settings may close active browsers.
 
 Cookies, site data, and extension preferences survive normal browser closure. **The Chromium directory is not fully encrypted with the smart-auth vault password.** It is not included in vault backups or account JSON exports, and locking does not erase its files. Browser fingerprint settings do not guarantee anonymity or prevent accounts from being linked.
+
+### Local ZIP extensions
+
+Open **Settings → Chromium browser → Local ZIP extensions** and select **Add ZIP…**. The native file picker accepts a local ZIP, which is validated before its name and version appear in the draft. Turn an entry on or off, or choose **Remove**, then **Save settings**. Adding, disabling and removing stay in the draft until saved. Reopen active account browsers to apply the saved configuration on their next launch. Smart Trader has its own separate enable and onboarding controls; the Chrome Web Store list remains available.
+
+Only install packages you trust. Extensions can read or change Steam pages and other pages allowed by their permissions. A local ZIP has no Chrome Web Store signature verification or automatic update source. Local packages receive a separate identity derived from their normalized contents; changing the code or manifest can create a new identity and does not carry over extension preferences automatically. ZIP compression, a single enclosing folder and publisher key/update URL alone do not change this identity.
+
+Use a Manifest V3 extension with `manifest.json` at the ZIP root or inside one enclosing folder containing the entire package. Chrome Apps, unsupported privileged permissions (including proxy, nativeMessaging, debugger, management and vpnProvider), browser-settings overrides and DevTools integration are rejected. A package requiring a newer browser version is rejected. The ZIP limit is 64 MiB, each expanded file 16 MiB, total expanded content 128 MiB and archive entry count 10,000. Unsafe paths and malformed archives are rejected. Up to 20 extensions may be configured in total, including enabled Smart Trader, Chrome Web Store entries and all local entries, even disabled ones.
+
+Keep the original ZIP for backup or transfer. The package files live in the application-data directory, outside the encrypted vault. To restore them on another computer, import the original ZIPs alongside the restored vault. To stop loading a package, disable it and save. To delete the installed package, select **Remove** and save.
 
 ## Loot
 

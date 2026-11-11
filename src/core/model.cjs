@@ -222,6 +222,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   browserSmartTraderEnabled: true,
   browserSmartTraderAutoCheck: false,
   browserExtensions: Object.freeze([]),
+  browserLocalExtensions: Object.freeze([]),
 });
 function normalizeBrowserSettings(settings = {}) {
   const browserSeparateSession =
@@ -301,7 +302,23 @@ function normalizeBrowserSettings(settings = {}) {
   const browserExtensions = entries
     .filter((entry) => entry.id !== DEFAULT_EXTENSION_ID)
     .map((entry) => entry.url);
-  if (browserExtensions.length + Number(browserSmartTraderEnabled) > 20)
+  const local = settings.browserLocalExtensions === undefined ? [] : settings.browserLocalExtensions;
+  if (!Array.isArray(local) || local.length > 20)
+    throw new Error(localeText.invalidBrowserSettings);
+  const reserved = new Set([DEFAULT_EXTENSION_ID, ...entries.map((entry) => entry.id)]);
+  const browserLocalExtensions = Array.from(local, (entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry) ||
+        Object.keys(entry).some((key) => !["id", "name", "version", "enabled"].includes(key)) ||
+        typeof entry.id !== "string" || !/^[a-p]{32}$/.test(entry.id) || reserved.has(entry.id) ||
+        typeof entry.name !== "string" || !entry.name.trim() || entry.name.length > 256 || /[\x00-\x1f\x7f]/.test(entry.name) ||
+        typeof entry.version !== "string" || !/^(0|[1-9]\d{0,4})(\.(0|[1-9]\d{0,4})){0,3}$/.test(entry.version) ||
+        entry.version.split(".").some((part) => Number(part) > 65535) ||
+        !entry.version.split(".").some((part) => Number(part) > 0) || typeof entry.enabled !== "boolean")
+      throw new Error(localeText.invalidBrowserSettings);
+    reserved.add(entry.id);
+    return { id: entry.id, name: entry.name, version: entry.version, enabled: entry.enabled };
+  });
+  if (browserExtensions.length + browserLocalExtensions.length + Number(browserSmartTraderEnabled) > 20)
     throw new Error(localeText.upTo20ExtensionsAreAllowed);
   return {
     browserSeparateSession,
@@ -310,6 +327,7 @@ function normalizeBrowserSettings(settings = {}) {
     browserShowBookmarksBar,
     browserBookmarks,
     browserExtensions,
+    browserLocalExtensions,
     browserSmartTraderEnabled,
     browserSmartTraderAutoCheck,
   };

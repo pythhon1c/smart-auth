@@ -71,6 +71,7 @@ const DEFAULT_SETTINGS = {
   browserSmartTraderEnabled: true,
   browserSmartTraderAutoCheck: false,
   browserExtensions: [],
+  browserLocalExtensions: [],
 };
 function migrateData(data) {
   let changed = migrateAppearanceSettings(data.settings);

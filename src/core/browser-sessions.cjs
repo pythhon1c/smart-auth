@@ -187,6 +187,7 @@ class BrowserSessions {
     onEvent = () => {},
     launchPersistentContext,
     extensions,
+    localExtensions,
     getSystemLocale = () => Intl.DateTimeFormat().resolvedOptions().locale,
   } = {}) {
     if (
@@ -221,6 +222,7 @@ class BrowserSessions {
         cacheDir: path.join(this.root, "extensions"),
         chromiumVersion,
       });
+    this.localExtensions = localExtensions;
     this.entries = new Map();
     this.cursors = new Map();
     this.preferred = new Map();
@@ -677,6 +679,17 @@ class BrowserSessions {
         ],
         { signal: e.abort.signal },
       );
+      const localIds = browserSettings.browserLocalExtensions.filter((item) => item.enabled).map((item) => item.id);
+      if (localIds.length) {
+        if (!this.localExtensions || typeof this.localExtensions.prepare !== "function") throw extensionFailure();
+        const local = await this.localExtensions.prepare(localIds, {
+          officialIds: [DEFAULT_EXTENSION_URL, ...browserSettings.browserExtensions].map((value) => value.split("/").pop()),
+          signal: e.abort.signal,
+        });
+        if (!local || !Array.isArray(local.paths) || !Array.isArray(local.extensions) || local.errors?.length) throw extensionFailure();
+        if (!prepared || !Array.isArray(prepared.paths) || prepared.errors?.length) throw extensionFailure();
+        prepared = { paths: [...prepared.paths, ...local.paths], extensions: [...(prepared.extensions || []), ...local.extensions], errors: [] };
+      }
     } catch {
       this._assert(e);
       throw extensionFailure();
@@ -770,7 +783,7 @@ class BrowserSessions {
                 `--disable-extensions-except=${prepared.paths.join(",")}`,
                 `--load-extension=${prepared.paths.join(",")}`,
               ]
-            : []),
+            : ["--disable-extensions"]),
         ],
       });
     } finally {

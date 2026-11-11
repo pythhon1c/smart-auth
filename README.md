@@ -6,9 +6,9 @@
 
 Windows Steam authenticator with encrypted local storage, per-account proxies, trade and market confirmations, persistent browser profiles, Loot automation, and password/2FA managers.
 
-**Current version: 0.14.4-beta.4.** The interface supports English, Ukrainian and Russian. English is the primary documentation language; Ukrainian and Russian README versions are available above. Application translations are stored separately under `src/locales/`.
+**Current version: 0.14.4-beta.5.** The interface supports English, Ukrainian and Russian. English is the primary documentation language; Ukrainian and Russian README versions are available above. Application translations are stored separately under `src/locales/`.
 
-[User guide](docs/USER-GUIDE.md) · [Build instructions](docs/BUILD.md) · [Release notes](docs/RELEASE-0.14.4-beta.4.md) · [License](LICENSE)
+[User guide](docs/USER-GUIDE.md) · [Build instructions](docs/BUILD.md) · [Release notes](docs/RELEASE-0.14.4-beta.5.md) · [License](LICENSE)
 
 ## Features
 
@@ -20,9 +20,11 @@ Windows Steam authenticator with encrypted local storage, per-account proxies, t
 - Local password manager, password generation and a separate non-Steam TOTP/HOTP manager.
 - Encrypted vault, optional app TOTP and PIN, automatic interface locking, tray actions, light/dark themes.
 
+In **Settings → Chromium browser → Local ZIP extensions**, choose **Add ZIP…**, review the name/version and enable state, then **Save settings**. Reopen active account browsers to apply. Smart Trader remains a separate control. Only add trusted packages; see the [extension guide](docs/USER-GUIDE.md#local-zip-extensions) for limits and backup requirements.
+
 ## Start using the app
 
-Use `smart-auth-0.14.4-beta.4-win-x64.exe` from the prepared release assets or the project's Releases section once published. Node.js is not required for the EXE. Compare the download with its accompanying `SHA256SUMS.txt`.
+Use `smart-auth-0.14.4-beta.5-win-x64.exe` from the prepared release assets or the project's Releases section once published. Node.js is not required for the EXE. Compare the download with its accompanying `SHA256SUMS.txt`.
 
 1. Read the [license](LICENSE) and [distribution notes](docs/DISTRIBUTION-NOTES.md).
 2. Fully exit any previous version, including its tray process, then start the EXE.
@@ -42,7 +44,7 @@ pnpm check
 pnpm dist
 ```
 
-The EXE is written to `release/smart-auth-0.14.4-beta.4-win-x64.exe`. The EXE and source ZIP contain no Google Chrome runtime. First account-browser use offers a direct Google download after accepting Google terms; later launches reuse the versioned local cache. Build and verification run locally; this repository does not require GitHub Actions. See [build instructions](docs/BUILD.md).
+The EXE is written to `release/smart-auth-0.14.4-beta.5-win-x64.exe`. The EXE and source ZIP contain no Google Chrome runtime. First account-browser use offers a direct Google download after accepting Google terms; later launches reuse the versioned local cache. Build and verification run locally; this repository does not require GitHub Actions. See [build instructions](docs/BUILD.md).
 
 The prepared source archive contains application code and build tools. Build outputs are excluded from Git. Download the portable EXE separately from the release assets.
 

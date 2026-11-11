@@ -2,6 +2,100 @@
 const featuresLocale = window.SmartLocaleData;
 // Public preferences and explicit import/edit workflows. All parsing and storage
 // of authenticator secrets stays in the main process.
+function browserLocalExtensionsEditor(initial = []) {
+  let entries = initial.map((entry) => ({ ...entry }));
+  const node = el("div", "browser-local-extensions"),
+    list = el("div", "browser-local-extension-list"),
+    status = el("p", "muted");
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  const changed = () =>
+    node.dispatchEvent(new Event("change", { bubbles: true }));
+  const draw = () => {
+    list.replaceChildren();
+    if (!entries.length)
+      list.append(el("p", "muted", featuresLocale.localExtensionsEmpty));
+    for (const entry of entries) {
+      const row = el("div", "browser-local-extension-row"),
+        details = el("div", "browser-local-extension-details");
+      details.append(
+        el("strong", "", entry.name),
+        el("small", "muted", entry.version),
+      );
+      const enabled = checkbox(
+        featuresLocale.localExtensionEnabled,
+        entry.enabled !== false,
+      );
+      enabled.input.setAttribute(
+        "aria-label",
+        t(featuresLocale.localExtensionEnabled) + ": " + entry.name,
+      );
+      enabled.input.onchange = () => {
+        entry.enabled = enabled.input.checked;
+        changed();
+      };
+      row.append(
+        details,
+        enabled.node,
+        btn(featuresLocale.localExtensionRemove, () => {
+          entries = entries.filter((item) => item.id !== entry.id);
+          draw();
+          status.textContent = t(featuresLocale.localExtensionRemovedDraft);
+          changed();
+        }),
+      );
+      list.append(row);
+    }
+  };
+  const add = btn(featuresLocale.localExtensionAddZip, async () => {
+    const generation = lockGeneration;
+    status.textContent = t(featuresLocale.localExtensionImporting);
+    try {
+      const result = await call("importBrowserExtensionZip", {
+        draftIds: entries.map((entry) => entry.id),
+      });
+      if (!node.isConnected || generation !== lockGeneration || locked) return;
+      if (result?.cancelled) {
+        status.textContent = "";
+        return;
+      }
+      if (result?.error) {
+        status.textContent = t(
+          featuresLocale["localExtension" + result.error] ||
+            featuresLocale.localExtensionZIP_FAILED,
+        );
+        return;
+      }
+      const entry = result?.extension;
+      if (!entry?.id || !entry.name || !entry.version) throw Error();
+      if (entries.some((item) => item.id === entry.id)) {
+        status.textContent = t(featuresLocale.localExtensionAlreadyListed);
+        return;
+      }
+      entries.push({
+        id: entry.id,
+        name: entry.name,
+        version: entry.version,
+        enabled: true,
+      });
+      draw();
+      status.textContent = t(featuresLocale.localExtensionAddedDraft);
+      changed();
+    } catch {
+      if (node.isConnected && generation === lockGeneration && !locked)
+        status.textContent = t(featuresLocale.localExtensionZIP_FAILED);
+    }
+  });
+  node.append(
+    el("h3", "", featuresLocale.localExtensionsTitle),
+    add,
+    list,
+    status,
+    el("p", "muted", featuresLocale.localExtensionsSaveHint),
+  );
+  draw();
+  return { node, values: () => entries.map((entry) => ({ ...entry })) };
+}
 function appLanguageSelect() {
   const prefs = window.SmartI18n.preferences;
   return select(
@@ -2140,6 +2234,8 @@ function settingsPage(main) {
   storeReference.className = "browser-smart-trader-store";
   storeReference.onclick = () => storeReference.select();
   browser.append(pinned);
+  const localExtensions = browserLocalExtensionsEditor(data.settings.browserLocalExtensions || []);
+  browser.append(localExtensions.node);
   const extensions = field(
     browser,
     featuresLocale.additionalChromeWebStoreExtensionsOneLinkPerLine,
@@ -2227,6 +2323,7 @@ function settingsPage(main) {
       title: title.value.trim(),
       url: url.value.trim(),
     })),
+    browserLocalExtensions: localExtensions.values(),
     browserSmartTraderEnabled: smartTrader.input.checked,
     browserSmartTraderAutoCheck: autoCheck.input.checked,
     browserExtensions: extensions.value

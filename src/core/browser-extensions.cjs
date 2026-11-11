@@ -730,4 +730,7 @@ module.exports = {
   validateManifest,
   downloadUrl,
   downloadOfficial,
+  checkedDirectory,
+  readPackage,
+  verifyTree,
 };

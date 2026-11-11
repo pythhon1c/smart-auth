@@ -146,6 +146,10 @@ const {
 } = require("./core/notifications.cjs");
 const QRCode = require("qrcode");
 const { BrowserSessions } = require("./core/browser-sessions.cjs");
+const { normalizeExtensions } = require("./core/browser-extensions.cjs");
+const {
+  AsyncLocalBrowserExtensionManager,
+} = require("./core/local-browser-extension-worker.cjs");
 const { BrowserRuntimeInstaller } = require("./core/browser-runtime.cjs");
 const {
   BrowserRuntimeController,
@@ -217,6 +221,10 @@ let win,
   pendingTrayReview = null;
 const { AsyncLocalStorage } = require("node:async_hooks");
 const uiRequests = new AsyncLocalStorage();
+const pendingExtensionImports = new Map();
+let localBrowserExtensions,
+  extensionPickerOpen = false,
+  extensionDraftGeneration = 0;
 let uiLocked = false,
   uiLockMode = "password",
   uiGeneration = 0,
@@ -581,6 +589,7 @@ function lock(mode = "password", { idle = false } = {}) {
   uiLocked = true;
   uiLockMode = mode;
   uiGeneration++;
+  pendingExtensionImports.clear();
   lockAcknowledged.clear();
   for (const window of managedWindows()) {
     if (window.isVisible()) showAfterLock.add(window.webContents.id);
@@ -779,6 +788,84 @@ function getBrowserRuntime() {
     });
   return browserRuntime;
 }
+function getLocalBrowserExtensions() {
+  if (!localBrowserExtensions)
+    localBrowserExtensions = new AsyncLocalBrowserExtensionManager({
+      userDataDir: app.getPath("userData"),
+      chromiumVersion: browserRuntimeManifest.version,
+    });
+  return localBrowserExtensions;
+}
+async function importBrowserExtensionZip(data, payload) {
+  const { draftIds } = payload;
+  if (
+    Object.keys(payload).some((key) => key !== "draftIds") ||
+    (draftIds !== undefined &&
+      (!Array.isArray(draftIds) ||
+        draftIds.length > 20 ||
+        !draftIds.every(
+          (id) => typeof id === "string" && /^[a-p]{32}$/.test(id),
+        )))
+  )
+    throw Error(localeText.invalidRequest);
+  if (extensionPickerOpen) return { error: "ZIP_FAILED" };
+  extensionPickerOpen = true;
+  const generation = uiGeneration,
+    draft = extensionDraftGeneration;
+  const isCurrent = () =>
+    generation === uiGeneration &&
+    draft === extensionDraftGeneration &&
+    !uiUnavailable();
+  try {
+    const choice = await dialog.showOpenDialog(win, {
+      properties: ["openFile"],
+      filters: [{ name: "ZIP", extensions: ["zip"] }],
+    });
+    if (!isCurrent() || choice.canceled || choice.filePaths?.length !== 1)
+      return { cancelled: true };
+    const manager = getLocalBrowserExtensions();
+    const saved = new Set(
+      (data.settings.browserLocalExtensions || []).map((entry) => entry.id),
+    );
+    if (draftIds) {
+      const retained = new Set(draftIds);
+      for (const id of pendingExtensionImports.keys())
+        if (!retained.has(id)) pendingExtensionImports.delete(id);
+    }
+    // Reclaim imports abandoned by a closed settings window or interrupted save.
+    for (const entry of manager.list()) {
+      if (!isCurrent()) return { cancelled: true };
+      if (!saved.has(entry.id) && !pendingExtensionImports.has(entry.id))
+        await manager.remove(entry.id);
+    }
+    if (!isCurrent()) return { cancelled: true };
+    const officialIds = normalizeExtensions(
+      data.settings.browserExtensions || [],
+    ).map((entry) => entry.id);
+    const { id, name, version } = await manager.importZip(choice.filePaths[0], {
+      officialIds,
+      isCurrent,
+    });
+    if (!isCurrent()) return { cancelled: true };
+    const extension = { id, name, version, enabled: true };
+    pendingExtensionImports.set(id, extension);
+    return { extension };
+  } catch (error) {
+    if (!isCurrent()) return { cancelled: true };
+    return {
+      error: [
+        "ZIP_INVALID",
+        "ZIP_INCOMPATIBLE",
+        "ZIP_COLLISION",
+        "ZIP_LIMIT",
+      ].includes(error.code)
+        ? error.code
+        : "ZIP_FAILED",
+    };
+  } finally {
+    extensionPickerOpen = false;
+  }
+}
 async function getBrowsers() {
   const runtime = await getBrowserRuntime().resolve();
   assertUiAccess();
@@ -787,6 +874,9 @@ async function getBrowsers() {
     root: path.join(app.getPath("userData"), "browser-sessions"),
     executablePath: runtime.executablePath,
     chromiumVersion: runtime.version,
+    localExtensions: {
+      prepare: (ids, options) => getLocalBrowserExtensions().prepare(ids, options),
+    },
     getSystemLocale: () =>
       app.getPreferredSystemLanguages()[0] || app.getLocale(),
     steam,
@@ -2251,6 +2341,8 @@ async function dispatch(action, p) {
         browsers: browserSessions?.list() || [],
       };
     }
+    case "importBrowserExtensionZip":
+      return importBrowserExtensionZip(data, p);
     case "browserRuntimeStatus":
       return getBrowserRuntime().status();
     case "startBrowserRuntimeDownload":
@@ -3007,6 +3099,27 @@ async function dispatch(action, p) {
       );
       const routeChanged = next.allowDirect !== data.settings.allowDirect;
       const previousBrowser = model.normalizeBrowserSettings(data.settings);
+      const removedPackages = new Set();
+      if (Object.hasOwn(p, "browserLocalExtensions")) {
+        const known = new Map([
+          ...previousBrowser.browserLocalExtensions.map((entry) => [
+            entry.id,
+            entry,
+          ]),
+          ...pendingExtensionImports,
+        ]);
+        for (const entry of next.browserLocalExtensions) {
+          const imported = known.get(entry.id);
+          if (
+            !imported ||
+            entry.name !== imported.name ||
+            entry.version !== imported.version
+          )
+            throw Error(localeText.invalidBrowserSettings);
+          known.delete(entry.id);
+        }
+        for (const id of known.keys()) removedPackages.add(id);
+      }
       const browserChanged =
         next.browserSeparateSession !==
           previousBrowser.browserSeparateSession ||
@@ -3020,6 +3133,8 @@ async function dispatch(action, p) {
           previousBrowser.browserSmartTraderEnabled ||
         next.browserSmartTraderAutoCheck !==
           previousBrowser.browserSmartTraderAutoCheck ||
+        JSON.stringify(next.browserLocalExtensions) !==
+          JSON.stringify(previousBrowser.browserLocalExtensions) ||
         JSON.stringify(next.browserExtensions) !==
           JSON.stringify(
             data.settings.browserExtensions ??
@@ -3033,6 +3148,14 @@ async function dispatch(action, p) {
       else if (browserChanged) stopBrowsers();
       if (!next.notificationsEnabled) notifications.clear();
       record(localeText.appSettingsSaved);
+      if (Object.hasOwn(p, "browserLocalExtensions")) {
+        extensionDraftGeneration++;
+        pendingExtensionImports.clear();
+        // Commit the vault before retiring any package. Files held open by
+        // Chromium can be reclaimed during the next import.
+        for (const id of removedPackages)
+          void getLocalBrowserExtensions().remove(id).catch(() => {});
+      }
       changed();
       managerChanged();
       authenticatorChanged();

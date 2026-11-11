@@ -91,7 +91,7 @@
   "message_f4fa415": "Оберіть зміну параметрів або новий fingerprint.",
   "validationMessage_8097c2a": "Некоректна збережена вебсесія Steam",
   "couldNotOpenTheProtectedBrowserCheckTheProxyAndSteamSession": "Не вдалося відкрити захищений браузер. Перевірте проксі та сесію Steam.",
-  "couldNotPrepareBrowserExtensionsCheckTheChromeWebStoreListInSettings": "Не вдалося підготувати розширення браузера. Перевірте список Chrome Web Store у налаштуваннях.",
+  "couldNotPrepareBrowserExtensionsCheckTheChromeWebStoreListInSettings": "Не вдалося підготувати розширення браузера. Перевірте розширення Chrome Web Store та ввімкнені локальні ZIP у налаштуваннях. Повторно імпортуйте ZIP, якщо файли відсутні.",
   "saveTheAccountPasswordToCreateASeparateSteamWebSession": "Збережіть пароль акаунта для створення окремої вебсесії Steam.",
   "steamRequiresAdditionalConfirmationToSignInToTheWebSession": "Steam потребує додаткового підтвердження входу у вебсесію.",
   "couldNotCheckTheConnectionToSteamCheckProxyAvailabilityAndSettings": "Не вдалося перевірити з’єднання зі Steam. Перевірте доступність і налаштування проксі.",

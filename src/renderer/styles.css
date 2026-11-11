@@ -2406,3 +2406,9 @@ dialog::backdrop {
 .settings-main > .settings-workspace > * { flex-shrink: 0; }
 .settings-main > .settings-save-bar { position: static; flex-shrink: 0; width: 100%; box-sizing: border-box; }
 .settings-workspace input, .settings-workspace select, .settings-workspace textarea, .settings-workspace button, .settings-section-summary { scroll-margin-block: 12px; }
+
+.browser-local-extensions { margin: 12px 0; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.browser-local-extensions h3 { margin: 0 0 8px; }
+.browser-local-extension-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.browser-local-extension-details { flex: 1; min-width: 0; display: grid; overflow-wrap: anywhere; }
+@media (max-width: 650px) { .browser-local-extension-row { flex-wrap: wrap; } .browser-local-extension-details { flex-basis: 100%; } }

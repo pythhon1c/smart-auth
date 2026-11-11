@@ -107,6 +107,7 @@ const actions = new Set([
   "bulkBanCheckStatus",
   "cancelBulkBanCheck",
   "startBrowserOpen",
+  "importBrowserExtensionZip",
   "browserRuntimeStatus",
   "startBrowserRuntimeDownload",
   "cancelBrowserRuntimeDownload",
