@@ -516,7 +516,7 @@
   "sessionSteamIDDoesNotMatchTheAccount": "SteamID сесії не збігається з обліковим записом",
   "validationMessage_d1ddb07": "Steam потребує ручного підтвердження входу",
   "pattern_79ad207": "^Потрібно (?:повторно )?увійти у Steam$",
-  "validationMessage_5b21a29": "Для автоматичного входу потрібен збережений пароль Steam",
+  "validationMessage_5b21a29": "Сесію Steam не створено. Збережіть пароль акаунта або увійдіть у Steam вручну.",
   "message_f904879": "Steam відхилив дані входу. Перевірте збережений пароль і Steam Guard",
   "validationMessage_e3341db": "Некоректна перевірка підтвердження",
   "confirmationAcknowledged": "Підтвердження прийнято",

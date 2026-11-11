@@ -978,10 +978,12 @@ function render({ preserveViewport = false } = {}) {
   );
   const main = el("main", "main");
   if (view === "loot") shell.classList.add("shell-loot");
+  if (view === "settings") shell.classList.add("shell-settings");
   side
     .querySelectorAll(".nav.active")
     .forEach((node) => node.setAttribute("aria-current", "page"));
-  shell.append(accountStats(), side, main);
+  if (view !== "settings") shell.append(accountStats());
+  shell.append(side, main);
   root.append(shell);
   paintNavigationCounts();
   paintAccountStats();
@@ -2026,7 +2028,7 @@ function editAccount(a) {
     });
   });
 }
-function loginDialog(a) {
+function loginDialog(a, afterLogin) {
   dialog(appLocale.signingInToSteam, (f) => {
     f.append(el("p", "", a.name));
     const useSaved = a.hasPassword
@@ -2064,7 +2066,9 @@ function loginDialog(a) {
         } finally {
           pass.value = "";
         }
+        if (!f.isConnected || !modal.open || locked) return;
         await refresh();
+        if (!f.isConnected || !modal.open || locked) return;
         if (
           result &&
           (result.pending ||
@@ -2072,7 +2076,8 @@ function loginDialog(a) {
             result.requiresGuard)
         ) {
           if (result.actionRequired || result.requiresGuard)
-            guardDialog(a, result);
+            guardDialog(a, result, afterLogin);
+          else if (afterLogin) waitForAccountSession(a, afterLogin);
           else {
             modal.close();
             toast(
@@ -2080,15 +2085,39 @@ function loginDialog(a) {
             );
           }
         } else {
-          modal.close();
           toast(appLocale.loginComplete);
+          if (afterLogin) afterLogin();
+          else modal.close();
         }
       },
       appLocale.logIn,
     );
   });
 }
-function guardDialog(a, result) {
+function waitForAccountSession(account, afterLogin) {
+  dialog(appLocale.signingInToSteam, (form) => {
+    form.append(
+      el("p", "", appLocale.waitingForSteamLoginTheSessionWillAppearAutomatically),
+    );
+    const expires = Date.now() + 120000;
+    const observe = () => {
+      if (locked || !modal.open || !form.isConnected || selected !== account.id)
+        return;
+      const current = data.accounts.find((entry) => entry.id === account.id);
+      if (current?.sessionReady) {
+        afterLogin();
+      } else if (Date.now() < expires) {
+        setTimeout(observe, 500);
+      } else {
+        form.replaceChildren(
+          btn(appLocale.logInToSteam, () => loginDialog(account, afterLogin)),
+        );
+      }
+    };
+    setTimeout(observe, 0);
+  });
+}
+function guardDialog(a, result, afterLogin) {
   dialog(appLocale.confirmLogin, (f) => {
     f.append(
       el(
@@ -2102,8 +2131,10 @@ function guardDialog(a, result) {
       f,
       async () => {
         const r = await call("submitGuard", { id: a.id, code: code.value });
+        if (!f.isConnected || !modal.open || locked) return;
         if (r?.pending || r?.status === "pending") {
           if (!r.actionRequired) {
+            if (afterLogin) return waitForAccountSession(a, afterLogin);
             modal.close();
             toast(r.message || appLocale.waitingForSteamLogin);
           } else
@@ -2112,9 +2143,11 @@ function guardDialog(a, result) {
                 appLocale.steamIsAwaitingConfirmationCheckTheCodeOrInstructions,
             );
         } else {
-          modal.close();
           await refresh();
+          if (!f.isConnected || !modal.open || locked) return;
           toast(appLocale.loginComplete);
+          if (afterLogin) afterLogin();
+          else modal.close();
         }
       },
       appLocale.confirm,
@@ -2122,13 +2155,23 @@ function guardDialog(a, result) {
   });
 }
 function openAccountConfirmations(a) {
+  // Detail buttons can survive a background snapshot after pending login.
+  // Read the current session state instead of their captured account object.
+  a = data.accounts.find((account) => account.id === a.id);
   if (
+    !a ||
     locked ||
     selected !== a.id ||
     a.hasIdentitySecret === false ||
     !data.accounts.some((account) => account.id === a.id)
   )
     return;
+  if (a.sessionReady === false && a.hasPassword === false) {
+    return loginDialog(a, () => {
+      const current = data.accounts.find((entry) => entry.id === a.id);
+      if (current?.sessionReady) openAccountConfirmations(current);
+    });
+  }
   let startLoading;
   dialog(appLocale.confirming, (form) => {
     const section = el("section", "account-confirmations"),
@@ -2688,7 +2731,7 @@ function settings(main) {
   const lock = field(
     card,
     appLocale.autoLockMinutes,
-    input("number", data.settings.autoLockMinutes ?? 10),
+    input("number", data.settings.autoLockMinutes ?? 0),
   );
   lock.min = 0;
   const poll = field(
@@ -3097,6 +3140,7 @@ function accountStats() {
   return append(header, scope, stats);
 }
 function paintAccountStats() {
+  if (view === "settings") return;
   const folder =
       view === "accounts" && group
         ? data.groups.find((item) => item.id === group)

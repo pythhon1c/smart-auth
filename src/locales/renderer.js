@@ -1,6 +1,31 @@
 "use strict";
 // Static UI translations and language-specific matching data.
 window.SmartLocaleData = Object.freeze({
+  settingsGeneral: "Загальні",
+  settingsGeneralHint: "Вигляд, системний трей і сповіщення",
+  settingsSecurity: "Блокування та захист",
+  settingsSecurityHint: "Таймери блокування й доступ до сховища",
+  settingsNetwork: "Мережа та продуктивність",
+  settingsNetworkHint: "Підключення, проксі й паралельні завдання",
+  settingsBrowserHint: "Сесії, вигляд, закладки й розширення",
+  settingsAutomation: "Автоматизація Steam",
+  settingsAutomationHint: "Адміністратори Steam і перевірка блокувань",
+  settingsUnsaved: "Є незбережені зміни",
+  settingsLayoutTranslations: `Загальні|General|Общие
+Вигляд, системний трей і сповіщення|Appearance, system tray and notifications|Внешний вид, системный трей и уведомления
+Блокування та захист|Locking and security|Блокировка и защита
+Таймери блокування й доступ до сховища|Lock timers and vault access|Таймеры блокировки и доступ к хранилищу
+Мережа та продуктивність|Network and performance|Сеть и производительность
+Підключення, проксі й паралельні завдання|Connections, proxies and concurrent tasks|Подключения, прокси и параллельные задачи
+Сесії, вигляд, закладки й розширення|Sessions, appearance, bookmarks and extensions|Сессии, внешний вид, закладки и расширения
+Автоматизація Steam|Steam automation|Автоматизация Steam
+Адміністратори Steam і перевірка блокувань|Steam administrators and ban checks|Администраторы Steam и проверка блокировок
+Є незбережені зміни|Unsaved changes|Есть несохранённые изменения`,
+  sessionAuthTranslations: "Сесію Steam не створено. Збережіть пароль акаунта або увійдіть у Steam вручну.|No Steam session is available. Save the account password or log in to Steam manually.|Сессия Steam не создана. Сохраните пароль аккаунта или войдите в Steam вручную.",
+  activeDataDirectory: "Папка даних програми",
+  activeDataDirectoryHint: "Натисніть шлях, потім Ctrl+C, щоб скопіювати.",
+  dataDirectoryTranslations: `Папка даних програми|App data directory|Папка данных программы
+Натисніть шлях, потім Ctrl+C, щоб скопіювати.|Click the path, then press Ctrl+C to copy.|Нажмите путь, затем Ctrl+C, чтобы скопировать.`,
   appUpdates: "Оновлення програми",
   appUpdateIdle: "Перевірте наявність нової версії smart-auth.",
   appUpdateCheck: "Перевірити оновлення",
@@ -10,7 +35,10 @@ window.SmartLocaleData = Object.freeze({
   appUpdateDownloading: "Завантаження та перевірка оновлення…",
   appUpdateRestarting: "Створення резервної копії та перезапуск…",
   appUpdateCurrentVersion: "Поточна версія: {version}",
-  appUpdateAvailableVersion: "Нова версія: {version}",
+  appUpdateLatestVersion: "Найновіша версія: {version}",
+  appUpdateUnchecked: "ще не перевірено",
+  appUpdateNoRelease: "немає доступного білду",
+  appUpdateNoNewer: "Новішого сумісного білду не знайдено.",
   appUpdateCurrent: "Встановлено актуальну версію.",
   appUpdateAvailable: "Доступна нова версія.",
   appUpdateReady: "Оновлення перевірено та готове до перезапуску.",
@@ -35,7 +63,10 @@ window.SmartLocaleData = Object.freeze({
 Завантаження та перевірка оновлення…|Downloading and verifying update…|Загрузка и проверка обновления…
 Створення резервної копії та перезапуск…|Creating backup and restarting…|Создание резервной копии и перезапуск…
 Поточна версія: {version}|Current version: {version}|Текущая версия: {version}
-Нова версія: {version}|New version: {version}|Новая версия: {version}
+Найновіша версія: {version}|Latest version: {version}|Последняя версия: {version}
+ще не перевірено|not checked yet|ещё не проверено
+немає доступного білду|no build available|нет доступной сборки
+Новішого сумісного білду не знайдено.|No newer compatible build was found.|Более новая совместимая сборка не найдена.
 Встановлено актуальну версію.|You have the latest version.|Установлена актуальная версия.
 Доступна нова версія.|A new version is available.|Доступна новая версия.
 Оновлення перевірено та готове до перезапуску.|The update is verified and ready to restart.|Обновление проверено и готово к перезапуску.

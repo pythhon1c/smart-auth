@@ -19,8 +19,8 @@ function idleLockAction({
     return null;
   const elapsed = now - lastInteraction;
   const passwordMinutes =
-    settings.passwordLockMinutes ?? settings.autoLockMinutes ?? 10;
-  const pinMinutes = settings.pinLockMinutes ?? 2;
+    settings.passwordLockMinutes ?? settings.autoLockMinutes ?? 0;
+  const pinMinutes = settings.pinLockMinutes ?? 0;
   // Full password escalation uses the original interaction time even in PIN mode.
   // A PIN lock is not activity and must never restart this longer deadline.
   if (

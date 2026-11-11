@@ -184,7 +184,7 @@ let win,
   lootWindows = new Map(),
   peopleRefresh = null,
   lastInteraction = performance.now(),
-  idleSettings = { pinLockMinutes: 2, passwordLockMinutes: 10 },
+  idleSettings = { pinLockMinutes: 0, passwordLockMinutes: 0 },
   epoch = 0,
   tickRunning = false,
   nextPoll = 0,
@@ -2229,6 +2229,8 @@ async function dispatch(action, p) {
         ...snapshot,
         locked: false,
         uiGeneration,
+        dataDirectory: app.getPath("userData"),
+        appVersion: app.getVersion(),
         banApiKeyConfigured: Boolean(data.banApiKey),
         lootStatuses: (loot?.statuses() || []).map((status) => ({
           ...status,
@@ -3123,7 +3125,8 @@ async function tick() {
           due[key] = false;
       if (!Object.values(due).some(Boolean)) continue;
       const session = account.mafile.Session || {};
-      if (!session.AccessToken && !session.RefreshToken) continue;
+      if (!session.AccessToken && !session.RefreshToken && !hasPassword(account))
+        continue;
       if (transport.rateLimitStatus(account).retryAfterMs > 0) continue;
       if (
         !data.settings.allowDirect &&

@@ -627,20 +627,11 @@ class BrowserSessions {
       }
       if (!cookies) throw failure();
     } else {
-      let loggedIn = false;
       e.stage = "session";
-      try {
-        await e.scoped._refresh(e.account);
-      } catch (error) {
-        this._assert(e);
-        if (error?.code === "STEAM_RATE_LIMIT") throw error;
-        if (!e.account.loginPassword) throw failure();
-        await e.scoped.login(e.account, {
-          password: e.account.loginPassword,
-          waitForCompletion: true,
-        });
-        loggedIn = true;
-      }
+      const session = await e.scoped.ensureSession(e.account, {
+        assertCurrent: () => this._assert(e),
+      });
+      let loggedIn = session.status === "authenticated";
       this._assert(e);
       accessToken(e.account);
       let verified = await this._verifyIdentity(e, pinned);
@@ -658,11 +649,14 @@ class BrowserSessions {
         if (refreshed) verified = await this._verifyIdentity(e, pinned);
         if (!verified && !loggedIn && e.account.loginPassword) {
           e.stage = "session";
-          await e.scoped.login(e.account, {
+          const login = await e.scoped.login(e.account, {
             password: e.account.loginPassword,
             waitForCompletion: true,
+            automatic: true,
+            assertCurrent: () => this._assert(e),
           });
           this._assert(e);
+          if (login.status !== "complete") throw failure();
           loggedIn = true;
           verified = await this._verifyIdentity(e, pinned);
         }

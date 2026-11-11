@@ -1,4 +1,5 @@
 "use strict";
+const { IDLE_LOCK_DEFAULTS, migrateIdleLockSettings } = require("./idle-lock-settings.cjs");
 const {
   migrateAppearanceSettings,
   resolveAppearanceLanguage,
@@ -39,9 +40,7 @@ const MAX_PAYLOAD_NODES = Math.floor(MAX_PLAINTEXT_BYTES / 8);
 const SCRYPT = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 const DEFAULT_SETTINGS = {
-  autoLockMinutes: 10,
-  pinLockMinutes: 2,
-  passwordLockMinutes: 10,
+  ...IDLE_LOCK_DEFAULTS,
   pollSeconds: 60,
   theme: "system",
   language: "en",
@@ -75,6 +74,7 @@ const DEFAULT_SETTINGS = {
 };
 function migrateData(data) {
   let changed = migrateAppearanceSettings(data.settings);
+  if (migrateIdleLockSettings(data.settings)) changed = true;
   if (
     data.banApiKey !== undefined &&
     data.banApiKey !== "" &&
@@ -94,15 +94,6 @@ function migrateData(data) {
   const beforeLoot = JSON.stringify(data.loot);
   ensureLootSchemes(data);
   if (beforeLoot !== JSON.stringify(data.loot)) changed = true;
-  if (
-    data.settings.passwordLockMinutes === undefined &&
-    Number.isInteger(data.settings.autoLockMinutes) &&
-    data.settings.autoLockMinutes >= 0 &&
-    data.settings.autoLockMinutes <= 1440
-  ) {
-    data.settings.passwordLockMinutes = data.settings.autoLockMinutes;
-    changed = true;
-  }
   if (data.proxyLists === undefined) {
     data.proxyLists = [];
     changed = true;

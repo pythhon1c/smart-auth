@@ -4,6 +4,7 @@ const localeText = require("../locales/application.json");
 // introducing user-facing validation errors. Never add user/server text, source
 // parsing at runtime, language heuristics, prefix matching or broad templates.
 const PUBLIC_MESSAGES = new Set([
+  localeText.validationMessage_5b21a29,
   localeText.singleMafileRequired,
   localeText.invalidImportPassword,
   localeText.singleAccountDetailsOnly,

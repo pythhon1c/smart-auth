@@ -1,4 +1,5 @@
 "use strict";
+const { IDLE_LOCK_DEFAULTS, migrateIdleLockSettings } = require("./idle-lock-settings.cjs");
 const { migrateAppearanceSettings } = require("./appearance-settings.cjs");
 const localeText = require("../locales/application.json");
 const { allocationRoute } = require("./proxy-allocation.cjs");
@@ -190,9 +191,7 @@ const DEFAULT_BROWSER_BOOKMARKS = Object.freeze([
   Object.freeze({ title: "2ip.io", url: "https://2ip.io/" }),
 ]);
 const DEFAULT_SETTINGS = Object.freeze({
-  autoLockMinutes: 10,
-  pinLockMinutes: 2,
-  passwordLockMinutes: 10,
+  ...IDLE_LOCK_DEFAULTS,
   pollSeconds: 60,
   theme: "system",
   language: "en",
@@ -320,16 +319,16 @@ function mergeSettings(data, p) {
     throw new Error(localeText.invalidSettings);
   const appearance = { ...data.settings };
   migrateAppearanceSettings(appearance);
+  migrateIdleLockSettings(appearance);
   const next = {
     ...DEFAULT_SETTINGS,
     ...data.settings,
     ...appearance,
     ...normalizeBrowserSettings(data.settings),
   };
-  next.passwordLockMinutes =
-    data.settings?.passwordLockMinutes ?? data.settings?.autoLockMinutes ?? 10;
   for (const key of Object.keys(p)) {
-    if (!Object.hasOwn(DEFAULT_SETTINGS, key))
+    if (!Object.hasOwn(DEFAULT_SETTINGS, key) ||
+        (key === "idleLockSettingsVersion" && p[key] !== IDLE_LOCK_DEFAULTS.idleLockSettingsVersion))
       throw new Error(localeText.unknownSetting);
     next[key] = p[key];
   }

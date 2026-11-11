@@ -29,13 +29,15 @@
   gap: 8px;
   margin-block: 12px;
 }
-.shell.shell-loot {
+.shell.shell-loot,
+.shell.shell-settings {
   grid-template-rows: minmax(0, 1fr);
 }
 .shell-loot > .dashboard-header {
   display: none;
 }
-.shell-loot > .main {
+.shell-loot > .main,
+.shell-settings > .main {
   grid-row: 1;
 }
 .loot-home .topbar {
@@ -2254,3 +2256,153 @@ dialog::backdrop {
   grid-column: 2 / -1;
   margin-top: -4px;
 }
+
+.data-directory-settings { min-width: 0; }
+.data-directory-settings input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-family: ui-monospace, Consolas, monospace;
+  cursor: text;
+}
+/* Main Settings only: compact app information and independent preference groups. */
+.settings-workspace.settings-grid {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 1160px;
+}
+.settings-workspace .settings-app-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.settings-app-info > .card {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.settings-app-info .app-update-settings h2 { margin: 0 0 8px; }
+.settings-app-info [data-app-update-versions] {
+  max-width: 100%;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+.settings-app-info [role="status"] { margin: 8px 0; }
+.settings-app-info .actions { margin: 0; }
+.settings-app-info .data-directory-settings input { width: 100%; max-width: none; }
+.settings-app-info .data-directory-settings p { margin-bottom: 0; }
+.settings-workspace .settings-section {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.settings-section-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 14px;
+  padding: 16px 18px;
+  cursor: pointer;
+  list-style: none;
+  border-radius: 12px;
+}
+.settings-section-summary::-webkit-details-marker { display: none; }
+.settings-section-summary::after {
+  content: "+";
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+}
+.settings-section[open] > .settings-section-summary::after { content: "−"; }
+.settings-section-summary:hover { background: var(--surface-raised); }
+.settings-section-summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.settings-section-title { font-size: 15px; font-weight: 650; }
+.settings-section-description { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.settings-section[open] > summary { border-bottom: 1px solid var(--line); border-radius: 12px 12px 0 0; }
+.settings-section-body { padding: 18px; }
+.settings-section-body > .card {
+  min-width: 0;
+  padding: 0;
+  margin: 0 0 22px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  break-inside: avoid;
+}
+.settings-section-body > .card:last-child { margin-bottom: 0; }
+.settings-workspace .settings-section-body h2 { font-size: 14px; margin: 0 0 12px; }
+.settings-workspace .settings-section-body p { max-width: 80ch; }
+.settings-workspace .settings-section-body > .card + .card { padding-top: 18px; border-top: 1px solid var(--line); }
+.settings-save-bar {
+  position: sticky;
+  bottom: -1px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  max-width: 1160px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: 0 -4px 16px #00000012;
+}
+.settings-save-bar > span { font-size: 12px; }
+.settings-save-bar > button { margin: 0; flex-shrink: 0; }
+@media (min-width: 1100px) {
+  .settings-section:not([data-settings-section="browser"]) > .settings-section-body { columns: 2; column-gap: 28px; }
+  .settings-section-body > .card { display: inline-block; width: 100%; }
+}
+@media (max-width: 960px) {
+  .settings-workspace .settings-app-info { grid-template-columns: minmax(0, 1fr); }
+  .settings-app-info .data-directory-settings { padding-top: 14px; border-top: 1px solid var(--line); }
+}
+@media (max-width: 560px) {
+  .settings-workspace .settings-app-info, .settings-section-body { padding: 14px; }
+  .settings-section-summary { padding: 14px; }
+  .settings-save-bar { padding: 10px 12px; }
+  .settings-save-bar > button { width: 100%; }
+}
+
+.settings-workspace .settings-app-info > .card { grid-column: auto; }
+
+.settings-page-heading { margin-bottom: 16px; }
+.settings-app-info > .card { border-radius: 0; }
+.settings-app-info [role="status"]:empty { display: none; }
+.settings-app-info .app-update-settings .actions { margin-top: 12px; }
+.settings-workspace .settings-app-info .settings-field > input[type="text"] { width: 100%; }
+.settings-save-bar > span:empty { display: none; }
+.settings-save-bar { justify-content: flex-end; }
+.settings-save-bar > span { margin-right: auto; }
+
+/* Reserve the Save area: preferences scroll above it, never behind it. */
+.main.settings-main { display: flex; flex-direction: column; overflow: hidden; }
+.settings-main > .settings-page-heading { flex-shrink: 0; }
+.settings-main > .settings-workspace { flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+.settings-main > .settings-workspace > * { flex-shrink: 0; }
+.settings-main > .settings-save-bar { position: static; flex-shrink: 0; width: 100%; box-sizing: border-box; }
+.settings-workspace input, .settings-workspace select, .settings-workspace textarea, .settings-workspace button, .settings-section-summary { scroll-margin-block: 12px; }

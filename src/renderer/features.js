@@ -1566,19 +1566,65 @@ function banApiSettingsCard() {
   card.append(actions);
   return card;
 }
+function dataDirectorySettingsCard() {
+  const card = el("section", "card data-directory-settings");
+  const directory = input("text", data.dataDirectory || "");
+  directory.readOnly = true;
+  directory.spellcheck = false;
+  directory.title = data.dataDirectory || "";
+  directory.dataset.dataDirectory = "true";
+  directory.addEventListener("click", () => directory.select());
+  field(card, featuresLocale.activeDataDirectory, directory);
+  card.append(el("p", "muted", featuresLocale.activeDataDirectoryHint));
+  return card;
+}
+
+let lastUpdateCheck;
 function appUpdateSettingsCard() {
   const card = el("section", "card app-update-settings"),
-    status = el("p", "", featuresLocale.appUpdateIdle),
-    versions = el("p", "muted"),
+    status = el("p"),
+    details = el("div", "muted"),
     actions = el("div", "actions");
+  const versions = btn("", () => {
+    details.hidden = !details.hidden;
+    versions.setAttribute("aria-expanded", String(!details.hidden));
+  });
+  details.id = "app-update-details";
+  details.hidden = true;
+  versions.dataset.appUpdateVersions = "true";
+  versions.setAttribute("aria-controls", details.id);
+  versions.setAttribute("aria-expanded", "false");
+  details.append(
+    el("p", "", featuresLocale.appUpdateStorageNote),
+    el("p", "", featuresLocale.appUpdateRestartNote),
+  );
   card.dataset.appUpdateSettings = "true";
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
-  let state = "idle",
+  let state = lastUpdateCheck?.state || "idle",
     busy = false;
   const generation = lockGeneration;
   const active = () =>
     !locked && generation === lockGeneration && card.isConnected;
+  function showVersions() {
+    const installed = data.appVersion;
+    const latest = lastUpdateCheck
+      ? lastUpdateCheck.latestVersion || t(featuresLocale.appUpdateNoRelease)
+      : t(featuresLocale.appUpdateUnchecked);
+    versions.textContent = [
+      t(featuresLocale.appUpdateCurrentVersion).replace("{version}", installed),
+      t(featuresLocale.appUpdateLatestVersion).replace("{version}", latest),
+    ].join(" · ");
+  }
+  function showResult() {
+    let message = featuresLocale.appUpdateAvailable;
+    if (state === "ready") message = featuresLocale.appUpdateReady;
+    if (state === "current") message = lastUpdateCheck.latestVersion === data.appVersion
+      ? featuresLocale.appUpdateCurrent
+      : featuresLocale.appUpdateNoNewer;
+    status.textContent = t(message);
+    showVersions();
+  }
   const run = async (action) => {
     if (busy || !active()) return;
     busy = true;
@@ -1600,7 +1646,10 @@ function appUpdateSettingsCard() {
           UPDATE_INTEGRITY: featuresLocale.appUpdateBadDownload,
           UPDATE_BACKUP_FAILED: featuresLocale.appUpdateBackupFailed,
         };
-        if (result.code === "UPDATE_INTEGRITY") state = "available";
+        if (result.code === "UPDATE_INTEGRITY" && lastUpdateCheck) {
+          state = "available";
+          lastUpdateCheck.state = state;
+        }
         status.className = "error";
         status.textContent = t(reasons[result.code] || featuresLocale.appUpdateFailed);
         return;
@@ -1614,24 +1663,12 @@ function appUpdateSettingsCard() {
       if (!["current", "available", "ready"].includes(result?.state))
         throw new Error("Invalid update result");
       state = result.state;
-      versions.textContent = t(featuresLocale.appUpdateCurrentVersion).replace(
-        "{version}",
-        result.currentVersion || "—",
-      );
-      if (state !== "current" && result.version)
-        versions.textContent +=
-          " · " +
-          t(featuresLocale.appUpdateAvailableVersion).replace(
-            "{version}",
-            result.version,
-          );
-      status.textContent = t(
-        state === "current"
-          ? featuresLocale.appUpdateCurrent
-          : state === "ready"
-            ? featuresLocale.appUpdateReady
-            : featuresLocale.appUpdateAvailable,
-      );
+      lastUpdateCheck = { state, latestVersion: result.latestVersion };
+      showResult();
+      if (state === "ready") {
+        details.hidden = false;
+        versions.setAttribute("aria-expanded", "true");
+      }
     } catch {
       if (!active()) return;
       status.className = "error";
@@ -1661,25 +1698,37 @@ function appUpdateSettingsCard() {
     restart.hidden = state !== "ready";
     card.setAttribute("aria-busy", String(busy));
   }
+  for (const button of [check, download, restart]) button.syncDisabled = paint;
   actions.append(check, download, restart);
   card.append(
     el("h2", "", featuresLocale.appUpdates),
     versions,
     status,
-    el("p", "muted", featuresLocale.appUpdateStorageNote),
-    el("p", "muted", featuresLocale.appUpdateRestartNote),
     actions,
+    details,
   );
+  if (lastUpdateCheck) showResult();
+  else showVersions();
   paint();
   return card;
 }
+const settingsSectionState = new Map();
+function settingsSection(key, title, description, cards) {
+  const section = el("details", "settings-section");
+  section.dataset.settingsSection = key;
+  section.open = settingsSectionState.get(key) ?? false;
+  const summary = el("summary", "settings-section-summary");
+  summary.append(el("span", "settings-section-title", title), el("span", "settings-section-description", description));
+  section.append(summary, append(el("div", "settings-section-body"), ...cards));
+  section.addEventListener("toggle", () => settingsSectionState.set(key, section.open));
+  return section;
+}
 function settingsPage(main) {
-  header(
-    main,
-    featuresLocale.settings_2aac460,
-    featuresLocale.appBehaviorSecurityAndBrowser,
-  );
-  const layout = el("div", "settings-grid"),
+  main.classList.add("settings-main");
+  const heading = header(main, featuresLocale.settings_2aac460);
+  heading.classList.add("settings-page-heading");
+  heading.querySelector("p").remove();
+  const layout = el("div", "settings-grid settings-workspace"),
     appearance = el("section", "card");
   appearance.append(el("h2", "", featuresLocale.appearance));
   const language = field(
@@ -1861,7 +1910,7 @@ function settingsPage(main) {
   const pinTimeout = field(
     locking,
     featuresLocale.pinLockAfterInactivityMinutes,
-    input("number", data.settings.pinLockMinutes ?? 2),
+    input("number", data.settings.pinLockMinutes ?? 0),
   );
   pinTimeout.min = 0;
   pinTimeout.max = 1440;
@@ -1870,7 +1919,7 @@ function settingsPage(main) {
     featuresLocale.passwordLockAfterInactivityMinutes,
     input(
       "number",
-      data.settings.passwordLockMinutes ?? data.settings.autoLockMinutes ?? 10,
+      data.settings.passwordLockMinutes ?? data.settings.autoLockMinutes ?? 0,
     ),
   );
   passwordTimeout.min = 0;
@@ -2199,19 +2248,16 @@ function settingsPage(main) {
       toast(featuresLocale.testNotificationSent);
     }),
   );
+  const appInfo = el("div", "settings-app-info");
+  appInfo.append(appUpdateSettingsCard(), dataDirectorySettingsCard());
   append(
     layout,
-    appearance,
-    behavior,
-    tray,
-    performance,
-    locking,
-    append(securitySettingsCard(true), hideSecurityNotice.node),
-    notifications,
-    browser,
-    steamAdminsSettingsCard(),
-    banApiSettingsCard(),
-    appUpdateSettingsCard(),
+    appInfo,
+    settingsSection("general", featuresLocale.settingsGeneral, featuresLocale.settingsGeneralHint, [appearance, tray, notifications]),
+    settingsSection("security", featuresLocale.settingsSecurity, featuresLocale.settingsSecurityHint, [locking, append(securitySettingsCard(true), hideSecurityNotice.node)]),
+    settingsSection("network", featuresLocale.settingsNetwork, featuresLocale.settingsNetworkHint, [behavior, performance]),
+    settingsSection("browser", featuresLocale.chromiumBrowser, featuresLocale.settingsBrowserHint, [browser]),
+    settingsSection("automation", featuresLocale.settingsAutomation, featuresLocale.settingsAutomationHint, [steamAdminsSettingsCard(), banApiSettingsCard()]),
   );
   // Keep each label and its control together as cards reflow.
   layout.querySelectorAll("label[for]").forEach((caption) => {
@@ -2222,18 +2268,21 @@ function settingsPage(main) {
     wrapper.append(caption, control);
   });
   main.append(layout);
-  append(
-    main,
-    el("div", "spacer"),
-    btn(
-      featuresLocale.saveSettings,
-      async () => {
-        await save();
-        toast(featuresLocale.settingsSaved);
-      },
-      "primary",
-    ),
-  );
+  const saveBar = el("div", "settings-save-bar");
+  const draftStatus = el("span", "muted");
+  draftStatus.setAttribute("role", "status");
+  const initialValues = JSON.stringify(values());
+  const updateDraftStatus = () => {
+    draftStatus.textContent = t(JSON.stringify(values()) === initialValues ? "" : featuresLocale.settingsUnsaved);
+  };
+  layout.addEventListener("input", updateDraftStatus);
+  layout.addEventListener("change", updateDraftStatus);
+  layout.addEventListener("click", updateDraftStatus);
+  saveBar.append(draftStatus, btn(featuresLocale.saveSettings, async () => {
+    await save();
+    toast(featuresLocale.settingsSaved);
+  }, "primary"));
+  main.append(saveBar);
 }
 function activityPage(main) {
   header(

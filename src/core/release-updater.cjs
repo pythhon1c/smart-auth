@@ -61,6 +61,7 @@ class ReleaseUpdater {
     this.downloadTimeoutMs = bounded(downloadTimeoutMs, 20 * 60 * 1000);
     this.stallTimeoutMs = bounded(stallTimeoutMs, 120000);
     this.release = null;
+    this.latestVersion = null;
     this.ready = false;
     this.flight = null;
   }
@@ -68,6 +69,7 @@ class ReleaseUpdater {
     return {
       state: this.ready ? "ready" : this.release ? "available" : "current",
       currentVersion: this.currentVersion,
+      latestVersion: this.latestVersion,
       version: this.release?.version || this.currentVersion,
     };
   }
@@ -187,7 +189,6 @@ class ReleaseUpdater {
             parsed = semver(version);
           if (
             !parsed ||
-            compare(parsed, current) <= 0 ||
             (current[3] === Infinity && parsed[3] !== Infinity) ||
             Boolean(release.prerelease) !== (parsed[3] !== Infinity)
           )
@@ -218,7 +219,9 @@ class ReleaseUpdater {
           });
         }
         candidates.sort((a, b) => compare(b.parsed, a.parsed));
-        const selected = candidates[0] || null;
+        const latest = candidates[0];
+        this.latestVersion = latest?.version || null;
+        const selected = latest && compare(latest.parsed, current) > 0 ? latest : null;
         if (
           this.release?.version !== selected?.version ||
           this.release?.digest !== selected?.digest ||

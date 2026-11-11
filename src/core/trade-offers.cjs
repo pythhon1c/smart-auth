@@ -331,7 +331,14 @@ class TradeOfferService {
     if (!this.isCurrent(account))
       throw new Error(localeText.validationMessage_ca8421a);
     const epoch = this.epoch;
-    await this.steam._refresh(account);
+    if (typeof this.steam.ensureSession === "function")
+      await this.steam.ensureSession(account, {
+        assertCurrent: () => {
+          if (epoch !== this.epoch || !this.isCurrent(account))
+            throw new Error(localeText.operationCancelled_bd689af);
+        },
+      });
+    else await this.steam._refresh(account);
     if (epoch !== this.epoch)
       throw new Error(localeText.operationCancelled_bd689af);
     return this._context(account);

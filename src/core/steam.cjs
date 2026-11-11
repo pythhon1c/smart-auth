@@ -292,6 +292,8 @@ class SteamService {
     this.busy = new Set();
     this.refreshes = new Map();
     this.lootAuthFailures = new WeakMap();
+    this.sessionPreparations = new Map();
+    this.cookiePreparations = new Map();
     this.uncertain = new Set();
     this.responding = new Set();
   }
@@ -329,6 +331,8 @@ class SteamService {
     this.offsets.clear();
     this.timeSyncedAt.clear();
     this.refreshes.clear();
+    this.sessionPreparations.clear();
+    this.cookiePreparations.clear();
     this.lootAuthFailures = new WeakMap();
     this.banRefreshes = new WeakMap();
     this.banAttemptAt = new WeakMap();
@@ -989,9 +993,84 @@ class SteamService {
     if (!this.offsets.has(account.id) || age < 0 || age >= 5 * 60 * 1000)
       await this.syncTime(account);
   }
-  async ensureLootSession(
+  async ensureSession(account, options = {}) {
+    const epoch = this.epoch;
+    const assertCurrent = options.assertCurrent || (() => {});
+    this._assert(epoch);
+    assertCurrent();
+    let task = this.sessionPreparations.get(account.id);
+    if (!task) {
+      // The initiating operation owns preparation; joiners recheck their own
+      // cancellation before cookies or authenticated use.
+      task = this._prepareSession(account, options);
+      task.verifyRoute = options.verifyRoute === true;
+      this.sessionPreparations.set(account.id, task);
+    }
+    try {
+      const result = await task;
+      this._assert(epoch);
+      assertCurrent();
+      // A loot caller joining ordinary session preparation still needs its
+      // route-readiness policy before proceeding with loot operations.
+      if (options.verifyRoute && !task.verifyRoute &&
+          typeof this.transport.ensureRoute === "function") {
+        options.onPhase?.("proxy");
+        await this.transport.ensureRoute(account, {
+          assertCurrent: () => { this._assert(epoch); assertCurrent(); },
+          onDetail: options.onDetail,
+        });
+        this._assert(epoch);
+        assertCurrent();
+      }
+      if (options.cookieSession !== false)
+        await this._ensureCookieSession(account, () => {
+          this._assert(epoch);
+          assertCurrent();
+        });
+      this._assert(epoch);
+      assertCurrent();
+      return result;
+    } finally {
+      if (this.sessionPreparations.get(account.id) === task)
+        this.sessionPreparations.delete(account.id);
+    }
+  }
+  async _ensureCookieSession(account, guard) {
+    guard();
+    let task = this.cookiePreparations.get(account.id);
+    if (!task) {
+      task = (async () => {
+        const previous = account.mafile.Session;
+        if (/^[a-fA-F0-9]{16,64}$/.test(previous?.SessionID || "")) return;
+        const next = {
+          ...previous,
+          SessionID: crypto.randomBytes(16).toString("hex"),
+        };
+        account.mafile.Session = next;
+        try {
+          await this.onChange(account);
+        } catch (error) {
+          if (account.mafile.Session === next) account.mafile.Session = previous;
+          error.lootFatal = true;
+          throw error;
+        }
+      })();
+      this.cookiePreparations.set(account.id, task);
+    }
+    try {
+      await task;
+      guard();
+    } finally {
+      if (this.cookiePreparations.get(account.id) === task)
+        this.cookiePreparations.delete(account.id);
+    }
+  }
+  async ensureLootSession(account, options = {}) {
+    return this.ensureSession(account, { ...options, verifyRoute: true });
+  }
+  async _prepareSession(
     account,
-    { assertCurrent = () => {}, onPhase = () => {}, onDetail } = {},
+    { assertCurrent = () => {}, onPhase = () => {}, onDetail, verifyRoute = false } = {},
   ) {
     const epoch = this.epoch;
     const guard = () => {
@@ -1002,24 +1081,6 @@ class SteamService {
         error.noRetry = true;
         throw error;
       }
-    };
-    const ensureCookieSession = async () => {
-      guard();
-      const previous = account.mafile.Session;
-      if (/^[a-fA-F0-9]{16,64}$/.test(previous?.SessionID || "")) return;
-      const next = {
-        ...previous,
-        SessionID: crypto.randomBytes(16).toString("hex"),
-      };
-      account.mafile.Session = next;
-      try {
-        await this.onChange(account);
-      } catch (error) {
-        if (account.mafile.Session === next) account.mafile.Session = previous;
-        error.lootFatal = true;
-        throw error;
-      }
-      guard();
     };
     const detail = (event) => {
       if (typeof onDetail !== "function") return;
@@ -1033,8 +1094,8 @@ class SteamService {
     };
     guard();
     this._assertAutomaticLoginAvailable(account);
-    onPhase("proxy");
-    if (typeof this.transport.ensureRoute === "function")
+    if (verifyRoute) onPhase("proxy");
+    if (verifyRoute && typeof this.transport.ensureRoute === "function")
       await this.transport.ensureRoute(account, {
         assertCurrent: guard,
         onDetail: typeof onDetail === "function" ? detail : undefined,
@@ -1047,7 +1108,6 @@ class SteamService {
       await this._refresh(account, false, { assertCurrent: guard });
       guard();
       this._assertAutomaticLoginAvailable(account);
-      await ensureCookieSession();
       this.lootAuthFailures.delete(account);
       detail({
         type:
@@ -1096,7 +1156,6 @@ class SteamService {
       await this._refresh(account, false, { assertCurrent: guard });
       guard();
       this._assertAutomaticLoginAvailable(account);
-      await ensureCookieSession();
       detail({ type: "auth-success" });
       return { status: "authenticated" };
     } catch (error) {
@@ -1247,7 +1306,7 @@ class SteamService {
     const epoch = this.epoch;
     await this._ensureTime(account);
     this._assert(epoch);
-    await this._refresh(account);
+    await this.ensureSession(account, { cookieSession: false });
     this._assert(epoch);
     const query = this._query(account, "conf");
     const response = await this._request(
@@ -1347,7 +1406,7 @@ class SteamService {
     const task = (async () => {
       await this._ensureTime(account);
       this._assert(epoch);
-      await this._refresh(account);
+      await this.ensureSession(account, { cookieSession: false });
       this._assert(epoch);
       if (this._confirmationForDetails(account, id) !== item)
         throw new Error(localeText.refreshTheConfirmationList);
@@ -1625,7 +1684,7 @@ class SteamService {
       await this._ensureTime(account);
       this._assert(epoch);
       assertCurrent();
-      await this._refresh(account);
+      await this.ensureSession(account, { assertCurrent, cookieSession: false });
       this._assert(epoch);
       assertCurrent();
       const current = this.confirmations.get(account.id)?.get(id);

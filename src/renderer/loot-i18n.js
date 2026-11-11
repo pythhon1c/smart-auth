@@ -7,6 +7,10 @@ window.LootI18n = (() => {
     const [en, ua, ru] = line.split("|");
     words.set(en, { en, ua, ru });
   }
+  for (const line of lootI18nLocale.sessionAuthTranslations.split("\n")) {
+    const [ua, en, ru] = line.split("|");
+    words.set(ua, { ua, en, ru });
+  }
   for (const [key, en] of Object.entries({
     delivered: "Delivered (verified)",
     "retry-wait": "Waiting to retry",

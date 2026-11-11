@@ -45,7 +45,7 @@ window.SmartI18n = (() => {
     } catch {}
   }
   const dictionary = new Map();
-  const entries = `${i18nLocale.translationTable_9b39cee}\n${i18nLocale.browserRuntimeTranslations}\n${i18nLocale.betaTranslations}\n${i18nLocale.singleImportTranslations}\n${i18nLocale.appUpdateTranslations}`;
+  const entries = `${i18nLocale.translationTable_9b39cee}\n${i18nLocale.browserRuntimeTranslations}\n${i18nLocale.betaTranslations}\n${i18nLocale.singleImportTranslations}\n${i18nLocale.appUpdateTranslations}\n${i18nLocale.dataDirectoryTranslations}\n${i18nLocale.sessionAuthTranslations}\n${i18nLocale.settingsLayoutTranslations}`;
   for (const line of entries.split("\n")) {
     const [ua, en, ru] = line.split("|");
     dictionary.set(ua, { ua, en, ru });
