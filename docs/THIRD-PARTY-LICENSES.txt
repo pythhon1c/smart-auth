@@ -7,6 +7,13 @@ components retain their own terms independently of Smart SDA's application
 license. This file does not establish redistribution rights for the complete
 Google-branded browser binary.
 
+Reviewed against the 0.14.4-beta.6 lockfile on 2026-11-19. The supplemental
+package versions below remain installed runtime dependencies; their notices
+were checked against the installed README/package.json and source notices.
+Electron 42.11.18 supplies its own LICENSE.electron.txt and
+LICENSES.chromium.html alongside the portable application. Development-only
+build tools are not covered by this supplemental runtime notice list.
+
 The two Nathan Rajlich notices below are reproduced from the License sections
 of the exact upstream README revisions associated with the installed versions.
 Those versions embed their license in README.md rather than a standalone

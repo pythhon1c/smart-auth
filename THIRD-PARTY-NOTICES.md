@@ -2,7 +2,7 @@
 
 smart-auth includes the runtime packages listed in `package.json` and pinned by `pnpm-lock.yaml`. These include steam-session (MIT), https-proxy-agent (MIT), socks-proxy-agent (MIT), qrcode (MIT), jsqr (Apache-2.0), image-size (MIT) and playwright-core (Apache-2.0). Their license files accompany the packages in the application archive. Additional copyright and permission notices for dependencies are provided in [Third-party licenses](docs/THIRD-PARTY-LICENSES.txt).
 
-Electron and its embedded Chromium components retain their own licenses. The portable application includes the notices supplied with Electron.
+Electron 42.11.18 and its embedded Chromium components retain their own licenses. The portable application includes the notices supplied with Electron, including LICENSE.electron.txt and LICENSES.chromium.html.
 
 ## Smart Trader
 

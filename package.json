@@ -1,6 +1,6 @@
 {
   "name": "smart-auth",
-  "version": "0.14.4-beta.5",
+  "version": "0.14.4-beta.8",
   "description": "Windows Steam authenticator with encrypted storage, per-account proxies and trade automation",
   "main": "src/main.cjs",
   "author": "smart-auth",
@@ -76,8 +76,8 @@
     "steam-session": "1.9.4"
   },
   "devDependencies": {
-    "electron": "42.11.14",
-    "electron-builder": "26.15.3",
+    "electron": "42.11.18",
+    "electron-builder": "26.18.0",
     "playwright": "1.62.1",
     "prettier": "3.6.2"
   },

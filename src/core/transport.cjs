@@ -333,6 +333,8 @@ class ProxyTransport {
       if (retryAfterMs > 0)
         throw Object.assign(new Error(localeText.validationMessage_ce6f28b), {
           code: "STEAM_RATE_LIMIT",
+          requestDisposition: "deferred",
+          retryDelaySource: "local-cooldown",
           noRetry: true,
           retryAfterMs,
           retryAt: new Date(Date.now() + retryAfterMs).toISOString(),

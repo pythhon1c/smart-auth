@@ -440,7 +440,8 @@ function prepareAccounts({
         throw Error("association");
       const account = normalize(record, associated);
       if (result.has(account.steamId)) {
-        const prior = result.get(account.steamId).account;
+        const entry = result.get(account.steamId);
+        const prior = entry.account;
         if (
           prior.mafile.shared_secret !== account.mafile.shared_secret ||
           prior.name.toLowerCase() !== account.name.toLowerCase() ||
@@ -452,6 +453,15 @@ function prepareAccounts({
             prior.mafile.device_id !== account.mafile.device_id)
         )
           throw Error("association");
+        // A code-only copy must not hide a complete canonical authenticator
+        // later in the same import. Only copy a validated, complete pair;
+        // never assemble confirmation credentials from separate partial files.
+        if (record.kind === "mafile" && account.canConfirm && !prior.canConfirm) {
+          prior.mafile.identity_secret = account.mafile.identity_secret;
+          prior.mafile.device_id = account.mafile.device_id;
+          prior.canConfirm = true;
+          delete entry.warnings;
+        }
         const merged = mergeExternalSessions(
           prior.mafile.ExternalSessions,
           account.mafile.ExternalSessions,

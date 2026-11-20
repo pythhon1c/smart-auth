@@ -38,7 +38,11 @@ const lootLocale = window.SmartLocaleData;
   let selectedTheme = "system";
   function applyTheme() {
     document.documentElement.dataset.theme =
-      selectedTheme === "system" ? (systemColors.matches ? "dark" : "light") : selectedTheme;
+      selectedTheme === "system"
+        ? systemColors.matches
+          ? "dark"
+          : "light"
+        : selectedTheme;
   }
   systemColors.addEventListener("change", applyTheme);
   applyTheme();
@@ -393,6 +397,40 @@ const lootLocale = window.SmartLocaleData;
     "queued",
   ]);
   const logNumber = (value) => Number.isSafeInteger(value) && value >= 0;
+  function rateEvidenceParts(details = {}, reasonText = "") {
+    const pieces = [];
+    if (logNumber(details.delayMs))
+      pieces.push(
+        t("Wait {seconds} seconds").replace(
+          "{seconds}",
+          Math.ceil(details.delayMs / 1000),
+        ),
+      );
+    if (
+      logNumber(details.httpStatus) &&
+      details.httpStatus >= 100 &&
+      details.httpStatus <= 599 &&
+      !reasonText.includes("HTTP " + details.httpStatus)
+    )
+      pieces.push("HTTP " + details.httpStatus);
+    if (details.requestDisposition === "deferred")
+      pieces.push(t("Request deferred locally"));
+    if (details.endpointCategory === "inventory")
+      pieces.push(t("Inventory endpoint"));
+    if (details.endpointCategory === "authentication")
+      pieces.push(t("Authentication endpoint"));
+    if (details.endpointCategory === "profile-ban-check")
+      pieces.push(t("Profile ban check"));
+    if (details.endpointCategory === "ban-api") pieces.push(t("Ban API check"));
+    const delayLabels = {
+      "retry-after": "Wait from Retry-After",
+      backoff: "Local backoff",
+      "local-cooldown": "Existing local cooldown",
+    };
+    if (Object.hasOwn(delayLabels, details.retryDelaySource))
+      pieces.push(t(delayLabels[details.retryDelaySource]));
+    return pieces;
+  }
   function logPosition() {
     if (!logHost) return logViewport;
     const row = [...logHost.children].find(
@@ -531,19 +569,7 @@ const lootLocale = window.SmartLocaleData;
             details.retryAttempt,
           ),
         );
-      if (logNumber(details.delayMs))
-        pieces.push(
-          t("Wait {seconds} seconds").replace(
-            "{seconds}",
-            Math.ceil(details.delayMs / 1000),
-          ),
-        );
-      if (
-        logNumber(details.httpStatus) &&
-        details.httpStatus >= 100 &&
-        details.httpStatus <= 599
-      )
-        pieces.push("HTTP " + details.httpStatus);
+      pieces.push(...rateEvidenceParts(details));
       if (logNumber(details.steamResult) && details.steamResult <= 1000000)
         pieces.push(
           t("Steam result {result}").replace("{result}", details.steamResult),
@@ -898,7 +924,13 @@ const lootLocale = window.SmartLocaleData;
           [
             name(account.accountId),
             t(account.state || ""),
-            account.phase !== account.state ? t(account.phase || "") : "",
+            account.phase !== account.state
+              ? t(
+                  (account.rateLimit && phaseLabels[account.phase]) ||
+                    account.phase ||
+                    "",
+                )
+              : "",
             account.completedOffers !== undefined
               ? t("Sent (awaiting delivery)") +
                 ": " +
@@ -919,6 +951,7 @@ const lootLocale = window.SmartLocaleData;
                 )
               : "",
             t(account.reason || ""),
+            ...rateEvidenceParts(account.rateLimit, t(account.reason || "")),
           ]
             .filter(Boolean)
             .join(" · "),

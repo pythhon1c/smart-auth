@@ -115,8 +115,42 @@ function eventErrorDetails(error) {
     .map((e) => e.eresult)
     .find((x) => Number.isInteger(x) && x >= 0 && x <= 1000000);
   if (status !== undefined) result.httpStatus = status;
+  for (const key of [
+    "endpointCategory",
+    "retryDelaySource",
+    "requestDisposition",
+  ])
+    if (typeof error?.[key] === "string") result[key] = error[key];
   if (steamResult !== undefined) result.steamResult = steamResult;
   return result;
+}
+function previewRateEvidence(error) {
+  if (!["STEAM_RATE_LIMIT", "STEAM_RATE_LIMIT_LOCAL"].includes(error?.code))
+    return null;
+  const safe = {},
+    details = eventErrorDetails(error);
+  for (const [key, allowed] of Object.entries({
+    endpointCategory: [
+      "inventory",
+      "authentication",
+      "profile-ban-check",
+      "ban-api",
+      "other",
+    ],
+    retryDelaySource: ["retry-after", "backoff", "local-cooldown"],
+    requestDisposition: ["response", "deferred"],
+  }))
+    if (allowed.includes(details[key])) safe[key] = details[key];
+  if (
+    details.requestDisposition !== "deferred" &&
+    Number.isSafeInteger(details.httpStatus) &&
+    details.httpStatus >= 100 &&
+    details.httpStatus <= 599
+  )
+    safe.httpStatus = details.httpStatus;
+  if (Number.isSafeInteger(error.retryAfterMs) && error.retryAfterMs >= 0)
+    safe.delayMs = error.retryAfterMs;
+  return safe;
 }
 const HOLD_STATES = new Set([
   "dispatching",
@@ -256,7 +290,7 @@ function assertLootBan(data, identity, source = true) {
   error.lootSkipSource = source;
   throw error;
 }
-function lootCoverage(data, rawSettings) {
+function lootCoverage(data, rawSettings, accountId) {
   const settings = normalizeLootSettings(rawSettings);
   const banned = new Set(
     data.accounts
@@ -267,6 +301,7 @@ function lootCoverage(data, rawSettings) {
   const sources = data.accounts
     .filter(
       (a) =>
+        (accountId === undefined || a.id === accountId) &&
         steamId(a.steamId) &&
         !banned.has(a.steamId) &&
         !warehouses.has(a.steamId) &&
@@ -337,6 +372,7 @@ function sourceRetryKind(error) {
     causes.some(
       (e) =>
         e.code === "STEAM_RATE_LIMIT" ||
+        e.code === "STEAM_RATE_LIMIT_LOCAL" ||
         e.code === "LOOT_LOGIN_PENDING" ||
         e.statusCode === 429 ||
         e.status === 429,
@@ -362,6 +398,21 @@ function sourceRetryKind(error) {
   return null;
 }
 const assetKey = (a) => `${a.appid}:${a.contextid}:${a.assetid}`;
+function heldAssetKeys(journal, sourceSteamId, assets, ignoreEntry) {
+  const offered = new Set(assets.map(assetKey));
+  const held = new Set();
+  for (const entry of journal)
+    if (
+      entry !== ignoreEntry &&
+      entry.sourceSteamId === sourceSteamId &&
+      HOLD_STATES.has(entry.state)
+    )
+      for (const asset of entry.assets) {
+        const key = assetKey(asset);
+        if (offered.has(key)) held.add(key);
+      }
+  return held;
+}
 const unitCount = (assets) =>
   assets.reduce((total, asset) => total + BigInt(asset.amount), 0n).toString();
 const tuples = (assets) =>
@@ -621,11 +672,11 @@ class LootService {
       localeText.message_f9e4eeb +
       Math.ceil((until - this.now()) / 1000) +
       localeText.message_d0b39ec;
-    const error = Error(
-      localeText.steamTemporarilyLimitedRequestsHTTP429TryAgainLater,
-    );
+    const error = Error(safeMessage);
+    error.code = "STEAM_RATE_LIMIT_LOCAL";
+    error.requestDisposition = "deferred";
+    error.retryDelaySource = "local-cooldown";
     error.lootSafeMessage = safeMessage;
-    error.statusCode = 429;
     error.noRetry = true;
     error.retryAt = new Date(until).toISOString();
     throw error;
@@ -665,6 +716,33 @@ class LootService {
       id,
       Math.max(this.rateLimitedUntil.get(id) || 0, this.now() + delay),
     );
+    response.retryAt = new Date(this.rateLimitedUntil.get(id)).toISOString();
+    if (response.requestDisposition === "deferred") {
+      response.retryDelaySource = "local-cooldown";
+      response.lootSafeMessage =
+        localeText.message_f9e4eeb +
+        Math.ceil(delay / 1000) +
+        localeText.message_d0b39ec;
+      return;
+    }
+    response.requestDisposition = "response";
+    response.retryDelaySource ||= raw !== undefined ? "retry-after" : "backoff";
+    response.lootSafeMessage = `${localeText.templateText_1d3c30d}${response.eresult === 84 ? "EResult 84" : Number.isInteger(response.statusCode) ? `HTTP ${response.statusCode}` : /^Steam HTTP 429$/.test(response.message || "") ? "HTTP 429" : "Steam"}${localeText.templateText_2882d94}`;
+  }
+  _assertResponseRateLimit(id, response, endpointCategory = "other") {
+    this._rateLimit(id, response);
+    if (response.statusCode !== 429) return;
+    const error = Object.assign(Error(response.lootSafeMessage), {
+      code: "STEAM_RATE_LIMIT",
+      noRetry: true,
+      statusCode: 429,
+      retryAt: response.retryAt,
+      lootSafeMessage: response.lootSafeMessage,
+      requestDisposition: "response",
+      retryDelaySource: response.retryDelaySource,
+      endpointCategory: response.endpointCategory || endpointCategory,
+    });
+    throw error;
   }
   _record(data) {
     if (!Array.isArray(data.loot?.schemes)) return data.loot;
@@ -672,8 +750,8 @@ class LootService {
     check(record, localeText.message_7e86bb7);
     return record;
   }
-  _coverage(run) {
-    return lootCoverage(run.data, run.settings);
+  _coverage(run, accountId) {
+    return lootCoverage(run.data, run.settings, accountId);
   }
   _checkCoverage(run) {
     const coverage = this._coverage(run);
@@ -697,11 +775,37 @@ class LootService {
       throw error;
     }
     check(
-      this._coverage(run).eligibleWarehouses[accountId]?.includes(
+      this._coverage(run, accountId).eligibleWarehouses[accountId]?.includes(
         partnerSteamId,
       ),
       localeText.message_ffb14ea,
     );
+  }
+  _assertNotReservedElsewhere(run, offer) {
+    // Only a fully held offer is a harmless local skip. Partial collisions keep
+    // the existing failure path and explicit previews retain their exact assets.
+    const held = new Set();
+    const offered = new Set(offer.assets.map(assetKey));
+    for (const entry of run.data.loot.journal)
+      if (
+        entry.sourceSteamId === offer.sourceSteamId &&
+        HOLD_STATES.has(entry.state)
+      ) {
+        if (
+          (entry.schemeId ?? "legacy") === this.schemeId &&
+          entry.assets.some((a) => offered.has(assetKey(a)))
+        )
+          return;
+        for (const asset of entry.assets) {
+          const key = assetKey(asset);
+          if (offered.has(key)) held.add(key);
+        }
+      }
+    if (offer.assets.length && offer.assets.every((a) => held.has(assetKey(a))))
+      throw Object.assign(Error(localeText.message_20a35bd), {
+        lootReservationSkip: true,
+        lootSafeMessage: localeText.message_20a35bd,
+      });
   }
   _data() {
     const data = this.getData();
@@ -863,8 +967,14 @@ class LootService {
       });
     else await this.steam._refresh(account);
     this._guard(run);
-    if (typeof this.steam.refreshBans === "function")
-      await this.steam.refreshBans(account);
+    if (typeof this.steam.refreshBans === "function") {
+      try {
+        await this.steam.refreshBans(account, { throwOnRateLimit: true });
+      } catch (error) {
+        this._rateLimit(account.steamId, error);
+        throw error;
+      }
+    }
     this._guard(run);
     assertLootBan(run.data, account.steamId);
     const session = account.mafile?.Session,
@@ -941,11 +1051,13 @@ class LootService {
       );
     } catch (error) {
       this._rateLimit(ctx.steamId, error);
-      this._assertCooldown(ctx.steamId);
       throw error;
     }
-    this._rateLimit(ctx.steamId, result);
-    if (result.statusCode === 429) this._assertCooldown(ctx.steamId);
+    this._assertResponseRateLimit(
+      ctx.steamId,
+      result,
+      new URL(url).pathname.startsWith("/inventory/") ? "inventory" : "other",
+    );
     this._current(ctx, run);
     ctx.bytes += Buffer.byteLength(String(result.body));
     check(ctx.bytes <= 128 * 1024 * 1024, localeText.message_27dd633);
@@ -964,8 +1076,7 @@ class LootService {
       assertCurrent: () => this._current(ctx, run),
       onResponse: (result) => {
         this._current(ctx, run);
-        this._rateLimit(ctx.steamId, result);
-        if (result.statusCode === 429) this._assertCooldown(ctx.steamId);
+        this._assertResponseRateLimit(ctx.steamId, result);
         ctx.bytes += Buffer.byteLength(String(result.body));
         check(ctx.bytes <= 128 * 1024 * 1024, localeText.message_27dd633);
       },
@@ -977,7 +1088,6 @@ class LootService {
         return await session[method](...args);
       } catch (error) {
         this._rateLimit(ctx.steamId, error);
-        this._assertCooldown(ctx.steamId);
         throw error;
       }
     };
@@ -1172,7 +1282,9 @@ class LootService {
     const read = async (account) => {
       this._guard(run);
       const bans = normalizeAccountBans(
-        await this.steam.lookupBans(account, identity),
+        await this.steam.lookupBans(account, identity, {
+          throwOnRateLimit: true,
+        }),
       );
       this._guard(run);
       run.warehouseBans.set(identity, { bans, readAt: this.now() });
@@ -1220,22 +1332,32 @@ class LootService {
         (w) => !lootCommunityBanned(run.data, w.steamId),
       ))
         tokens.set(w.steamId, await this._warehouseToken(w, run));
+    const sources = this._sources(run).filter(
+      (source) => !sourceIds || sourceIds.has(source.id),
+    );
+    const sourceIdentities = new Set(sources.map((source) => source.steamId));
     const offers = [],
       skipped = [],
       reserved = new Set(
         run.data.loot.journal
-          .filter((e) => HOLD_STATES.has(e.state))
+          .filter(
+            (e) =>
+              HOLD_STATES.has(e.state) && sourceIdentities.has(e.sourceSteamId),
+          )
           .flatMap((e) =>
             e.assets.map((a) => e.sourceSteamId + ":" + assetKey(a)),
           ),
       );
+    let capacityBlocked = false;
     const budget = allocation || {
       remaining: limit,
       rotation: run.data.loot.journal.length,
     };
-    for (const source of this._sources(run)) {
-      if (sourceIds && !sourceIds.has(source.id)) continue;
-      if (!budget.remaining) break;
+    for (const source of sources) {
+      if (!budget.remaining) {
+        capacityBlocked = !!allocation;
+        break;
+      }
       try {
         await this.accountWork(source.id, async (account) => {
           onSourcePhase(source.id, "session");
@@ -1244,8 +1366,11 @@ class LootService {
             ),
             assets = [];
           onSourcePhase(source.id, "inventory");
+          // Inventories may contain up to one million positions; spreading
+          // them as call arguments exceeds the engine's argument limit.
           for (const appid of run.settings.appIds)
-            assets.push(...(await this._inventory(ctx, run, appid)));
+            for (const asset of await this._inventory(ctx, run, appid))
+              assets.push(asset);
           this._recordEvent("inventory-read", {
             run,
             accountId: account.id,
@@ -1254,17 +1379,16 @@ class LootService {
           });
           // Limits count inventory positions. A stack is one position and its
           // exact complete decimal amount is never split by the collection cap.
-          const chosen = assets
-            .filter(
-              (asset) =>
-                !reserved.has(account.steamId + ":" + assetKey(asset)) &&
-                !excludeAssets.has(account.steamId + ":" + assetKey(asset)),
-            )
-            .slice(0, budget.remaining);
-          budget.remaining -= chosen.length;
+          const available = assets.filter(
+            (asset) =>
+              !reserved.has(account.steamId + ":" + assetKey(asset)) &&
+              !excludeAssets.has(account.steamId + ":" + assetKey(asset)),
+          );
+          capacityBlocked ||= available.length > 0 && !budget.remaining;
+          const chosen = available.slice(0, budget.remaining);
           // Refresh after inventory awaits; reuse only within this synchronous batch.
           const eligibleIds = chosen.length
-            ? this._coverage(run).eligibleWarehouses[account.id]
+            ? this._coverage(run, account.id).eligibleWarehouses[account.id]
             : [];
           const warehouses = run.settings.warehouses.filter((w) =>
             eligibleIds?.includes(w.steamId),
@@ -1279,10 +1403,12 @@ class LootService {
               assets: batch,
             });
           }
+          budget.remaining -= chosen.length;
         });
       } catch (error) {
         this._guard(run);
         if (error?.lootFatal) throw error;
+        this._rateLimit(source.steamId, error);
         this._recordEvent("source-skipped", {
           run,
           accountId: source.id,
@@ -1290,9 +1416,11 @@ class LootService {
           level: "warning",
           details: eventErrorDetails(error),
         });
+        const rateLimit = previewRateEvidence(error);
         skipped.push({
           accountId: source.id,
           reason: error?.lootSafeMessage || localeText.message_8ce6ecd,
+          ...(rateLimit ? { phase: "preparing", rateLimit } : {}),
           ...(error?.retryAt ? { retryAt: error.retryAt } : {}),
           ...(sourceRetryKind(error) ? { retryable: true } : {}),
         });
@@ -1310,6 +1438,7 @@ class LootService {
       steamEpoch: run.steamEpoch,
       offers,
       skipped,
+      capacityBlocked,
       warehouseBans: run.warehouseBans,
     };
   }
@@ -1416,17 +1545,19 @@ class LootService {
         const originalRequests = new Set(
           run.data.loot.journal.map((e) => e.requestId),
         );
-        const progressFor = (id) => {
-          let progress = job.accounts.find((a) => a.accountId === id);
+        const progressByAccount = new Map();
+        const progressFor = (id, initialState = "failed") => {
+          let progress = progressByAccount.get(id);
           if (!progress) {
             progress = {
               accountId: id,
-              state: "failed",
+              state: initialState,
               completedOffers: 0,
               completedItems: 0,
               completedUnits: "0",
               retryAttempt: 0,
             };
+            progressByAccount.set(id, progress);
             job.accounts.push(progress);
             this._trackProgress(progress);
           }
@@ -1498,8 +1629,8 @@ class LootService {
           limit = run.settings.maxItemsPerRun,
         ) => {
           recordSkips(plan);
-          const groups = [...new Set(plan.offers.map((o) => o.accountId))].map(
-            (id) => plan.offers.filter((o) => o.accountId === id),
+          const groups = Array.from(
+            Map.groupBy(plan.offers, (offer) => offer.accountId).values(),
           );
           const sources = sourceIds
             ? this._sources(run).filter((source) => sourceIds.has(source.id))
@@ -1510,13 +1641,21 @@ class LootService {
           };
           let next = 0,
             fatal = null;
+          const deferredSources = [];
+          const sourceOrder = new Map(
+            sources?.map((source, i) => [source.id, i]),
+          );
           const claim = () => {
             this._guard(run);
             if (fatal) return null;
             if (sources)
-              return !allocation.remaining || next >= sources.length
+              return !allocation.remaining
                 ? null
-                : sources[next++];
+                : deferredSources.length
+                  ? deferredSources.shift()
+                  : next >= sources.length
+                    ? null
+                    : sources[next++];
             return next >= groups.length ? null : groups[next++];
           };
           const worker = async () => {
@@ -1558,6 +1697,18 @@ class LootService {
                   });
                   this._guard(run);
                   if (fatal) return;
+                  if (sourcePlan.capacityBlocked) {
+                    // Another worker provisionally owns the cap. Its definitive
+                    // preflight failure may release space; do not lose this source
+                    // or spin while that worker is still awaiting dispatch.
+                    deferredSources.push(claimed);
+                    deferredSources.sort(
+                      (a, b) => sourceOrder.get(a.id) - sourceOrder.get(b.id),
+                    );
+                    progressFor(claimed.id).state = "pending";
+                    progressFor(claimed.id).phase = "pending";
+                    continue;
+                  }
                   recordSkips(sourcePlan);
                   job.skipped.push(...structuredClone(sourcePlan.skipped));
                   job.totalOffers += sourcePlan.offers.length;
@@ -1583,25 +1734,15 @@ class LootService {
                 }
                 for (const offer of offers) {
                   this._guard(run);
-                  if (failedAccounts.has(offer.accountId)) continue;
+                  if (failedAccounts.has(offer.accountId)) {
+                    if (sources) allocation.remaining += offer.assets.length;
+                    continue;
+                  }
                   attemptedSources.add(offer.accountId);
                   job.attemptedSources = attemptedSources.size;
                   job.currentAccountId = offer.accountId;
                   job.currentPartnerSteamId = offer.partnerSteamId;
-                  let progress = job.accounts.find(
-                    (a) => a.accountId === offer.accountId,
-                  );
-                  if (!progress) {
-                    progress = {
-                      accountId: offer.accountId,
-                      state: "sending",
-                      completedOffers: 0,
-                      completedItems: 0,
-                      completedUnits: "0",
-                    };
-                    job.accounts.push(progress);
-                    this._trackProgress(progress);
-                  }
+                  const progress = progressFor(offer.accountId, "sending");
                   progress.state = "sending";
                   progress.phase = "sending";
                   this._event();
@@ -1654,6 +1795,37 @@ class LootService {
                     );
                   } catch (error) {
                     this._guard(run);
+                    // Only positions proven not dispatched return to this pass.
+                    // Unknown sends and durable holds continue consuming the cap.
+                    if (
+                      sources &&
+                      !error?.lootUncertainSend &&
+                      !run.data.loot.journal
+                        .slice(journalBefore)
+                        .some(
+                          (e) =>
+                            HOLD_STATES.has(e.state) &&
+                            (e.schemeId ?? "legacy") === this.schemeId &&
+                            e.accountId === offer.accountId &&
+                            e.sourceSteamId === offer.sourceSteamId,
+                        )
+                    )
+                      allocation.remaining += offer.assets.length;
+                    if (error?.lootReservationSkip) {
+                      progress.state = progress.completedOffers
+                        ? "completed"
+                        : "skipped";
+                      progress.phase = progress.state;
+                      progress.reason = error.lootSafeMessage;
+                      this._recordEvent("source-skipped", {
+                        run,
+                        accountId: offer.accountId,
+                        phase: progress.phase,
+                        details: { reason: "reserved" },
+                      });
+                      this._event();
+                      continue;
+                    }
                     this._recordEvent("send-error", {
                       run,
                       accountId: offer.accountId,
@@ -1753,7 +1925,8 @@ class LootService {
                 if (
                   completedId &&
                   offers.length &&
-                  !failedAccounts.has(completedId)
+                  !failedAccounts.has(completedId) &&
+                  progressFor(completedId).completedOffers > 0
                 ) {
                   const progress = progressFor(completedId);
                   this._recordEvent("source-completed", {
@@ -2056,6 +2229,18 @@ class LootService {
       ])
         if (Number.isSafeInteger(details[key]) && details[key] >= 0)
           safe[key] = details[key];
+      for (const [key, allowed] of Object.entries({
+        endpointCategory: [
+          "inventory",
+          "authentication",
+          "profile-ban-check",
+          "ban-api",
+          "other",
+        ],
+        retryDelaySource: ["retry-after", "backoff", "local-cooldown"],
+        requestDisposition: ["response", "deferred"],
+      }))
+        if (allowed.includes(details[key])) safe[key] = details[key];
       for (const key of ["backup", "revalidate"])
         if (typeof details[key] === "boolean") safe[key] = details[key];
       if (
@@ -2355,7 +2540,8 @@ class LootService {
               ) {
                 const inventory = [];
                 for (const appid of new Set(entry.assets.map((a) => a.appid)))
-                  inventory.push(...(await this._inventory(ctx, run, appid)));
+                  for (const asset of await this._inventory(ctx, run, appid))
+                    inventory.push(asset);
                 this._current(ctx, run);
                 const inventoryReadAt = this.now();
                 if (
@@ -2498,6 +2684,7 @@ class LootService {
       account?.steamId === offer.sourceSteamId &&
         account.steamId !== offer.partnerSteamId,
     );
+    this._assertNotReservedElsewhere(run, offer);
     const ctx = await this._ready(account, run),
       current = new Map();
     for (const appid of new Set(offer.assets.map((a) => a.appid)))
@@ -2505,20 +2692,17 @@ class LootService {
         revalidate: true,
       }))
         current.set(assetKey(a), a);
+    const reserved = heldAssetKeys(
+      run.data.loot.journal,
+      account.steamId,
+      offer.assets,
+    );
     for (const a of offer.assets) {
       check(
         current.get(assetKey(a))?.amount === a.amount,
         localeText.message_525ed7c,
       );
-      check(
-        !run.data.loot.journal.some(
-          (e) =>
-            HOLD_STATES.has(e.state) &&
-            e.sourceSteamId === account.steamId &&
-            e.assets.some((b) => assetKey(a) === assetKey(b)),
-        ),
-        localeText.message_20a35bd,
-      );
+      check(!reserved.has(assetKey(a)), localeText.message_20a35bd);
     }
     const partner = (BigInt(offer.partnerSteamId) - BASE).toString(),
       referer =
@@ -2566,6 +2750,7 @@ class LootService {
     const { ctx, community, referer } = proof;
     this._current(ctx, run);
     this._allowed(run, offer.accountId, offer.partnerSteamId);
+    this._assertNotReservedElsewhere(run, offer);
     if (preflightOnly) return proof;
     if (!sendPermit)
       return this._withSendPermit(run, (refresh) =>
@@ -2640,17 +2825,13 @@ class LootService {
             run.data.loot.journal.includes(intent) &&
             digest(intent) === immutableIntent,
         );
-        check(
-          !run.data.loot.journal.some(
-            (e) =>
-              e !== intent &&
-              HOLD_STATES.has(e.state) &&
-              e.sourceSteamId === intent.sourceSteamId &&
-              e.assets.some((a) =>
-                intent.assets.some((b) => assetKey(a) === assetKey(b)),
-              ),
-          ),
+        const reserved = heldAssetKeys(
+          run.data.loot.journal,
+          intent.sourceSteamId,
+          intent.assets,
+          intent,
         );
+        check(!intent.assets.some((a) => reserved.has(assetKey(a))));
         intent.attemptedAt = new Date(this.now()).toISOString();
         dispatched = true;
         this.lastSendAt = this.now();

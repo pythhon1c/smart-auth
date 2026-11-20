@@ -1,22 +1,35 @@
 "use strict";
 // Static UI translations and language-specific matching data.
 window.SmartLocaleData = Object.freeze({
+  lootRateDiagnosticsTranslations:
+    "Profile ban check|Перевірка банів у профілі|Проверка банов в профиле\nBan API check|Перевірка банів через API|Проверка банов через API\nRequest deferred locally|Запит відкладено локально|Запрос отложен локально\nInventory endpoint|Запит інвентарю|Запрос инвентаря\nAuthentication endpoint|Запит автентифікації|Запрос аутентификации\nWait from Retry-After|Пауза з Retry-After|Пауза из Retry-After\nLocal backoff|Локальна пауза|Локальная пауза\nExisting local cooldown|Чинна локальна пауза|Действующая локальная пауза",
+  lootLocalCooldownPattern:
+    "^Запит відкладено локально через чинну паузу\\. Спробуйте через (\\d+) с\\.?$",
+  lootLocalCooldownRu:
+    "Запрос отложен локально из-за действующей паузы. Попробуйте через {seconds} с.",
   localExtensionsTitle: "Локальні розширення ZIP",
   localExtensionsEmpty: "Локальних розширень немає.",
   localExtensionEnabled: "Увімкнено",
   localExtensionRemove: "Видалити",
   localExtensionAddZip: "Додати ZIP…",
   localExtensionImporting: "Перевірка ZIP…",
-  localExtensionZIP_INVALID: "Некоректний ZIP. Виберіть пакет із manifest.json.",
-  localExtensionZIP_INCOMPATIBLE: "Несумісне розширення. Виберіть підтримуваний пакет Manifest V3.",
-  localExtensionAlreadyListed: "Розширення вже є у списку. Вибраний стан збережено; повторний імпорт відновлює файли пакета.",
-  localExtensionZIP_COLLISION: "Ідентифікатор розширення конфліктує з іншим пакетом. Виберіть інший ZIP.",
+  localExtensionZIP_INVALID:
+    "Некоректний ZIP. Виберіть пакет із manifest.json.",
+  localExtensionZIP_INCOMPATIBLE:
+    "Несумісне розширення. Виберіть підтримуваний пакет Manifest V3.",
+  localExtensionAlreadyListed:
+    "Розширення вже є у списку. Вибраний стан збережено; повторний імпорт відновлює файли пакета.",
+  localExtensionZIP_COLLISION:
+    "Ідентифікатор розширення конфліктує з іншим пакетом. Виберіть інший ZIP.",
   localExtensionZIP_LIMIT: "Досягнуто ліміт розширень. Видаліть зайві пакети.",
-  localExtensionZIP_FAILED: "Не вдалося додати ZIP. Перевірте файл і повторіть.",
+  localExtensionZIP_FAILED:
+    "Не вдалося додати ZIP. Перевірте файл і повторіть.",
   localExtensionAddedDraft: "Додано до чернетки. Збережіть налаштування.",
   localExtensionRemovedDraft: "Видалено з чернетки. Збережіть налаштування.",
-  localExtensionsSaveHint: "Додавайте лише довірені розширення: вони можуть читати сторінки Steam. Збережіть налаштування й перевідкрийте активні профілі для застосування. Smart Trader керується окремо.",
-  localExtensionsTranslations: "Розширення вже є у списку. Вибраний стан збережено; повторний імпорт відновлює файли пакета.|The extension is already in the list. Your selection is preserved; reimport restores package files.|Расширение уже есть в списке. Выбранное состояние сохранено; повторный импорт восстанавливает файлы пакета.\nЛокальні розширення ZIP|Local ZIP extensions|Локальные расширения ZIP\nЛокальних розширень немає.|No local extensions.|Локальных расширений нет.\nУвімкнено|Enabled|Включено\nВидалити|Remove|Удалить\nДодати ZIP…|Add ZIP…|Добавить ZIP…\nПеревірка ZIP…|Checking ZIP…|Проверка ZIP…\nНекоректний ZIP. Виберіть пакет із manifest.json.|Invalid ZIP. Choose a package with manifest.json.|Некорректный ZIP. Выберите пакет с manifest.json.\nНесумісне розширення. Виберіть підтримуваний пакет Manifest V3.|Incompatible extension. Choose a supported Manifest V3 package.|Несовместимое расширение. Выберите поддерживаемый пакет Manifest V3.\nІдентифікатор розширення конфліктує з іншим пакетом. Виберіть інший ZIP.|The extension identity conflicts with another package. Choose a different ZIP.|Идентификатор расширения конфликтует с другим пакетом. Выберите другой ZIP.\nДосягнуто ліміт розширень. Видаліть зайві пакети.|Extension limit reached. Remove unused packages.|Достигнут лимит расширений. Удалите лишние пакеты.\nНе вдалося додати ZIP. Перевірте файл і повторіть.|Could not add ZIP. Check the file and try again.|Не удалось добавить ZIP. Проверьте файл и повторите.\nДодано до чернетки. Збережіть налаштування.|Added to draft. Save settings.|Добавлено в черновик. Сохраните настройки.\nВидалено з чернетки. Збережіть налаштування.|Removed from draft. Save settings.|Удалено из черновика. Сохраните настройки.\nДодавайте лише довірені розширення: вони можуть читати сторінки Steam. Збережіть налаштування й перевідкрийте активні профілі для застосування. Smart Trader керується окремо.|Only add trusted extensions: they can read Steam pages. Save settings and reopen active profiles to apply. Smart Trader is managed separately.|Добавляйте только доверенные расширения: они могут читать страницы Steam. Сохраните настройки и переоткройте активные профили для применения. Smart Trader управляется отдельно.",
+  localExtensionsSaveHint:
+    "Додавайте лише довірені розширення: вони можуть читати сторінки Steam. Збережіть налаштування й перевідкрийте активні профілі для застосування. Smart Trader керується окремо.",
+  localExtensionsTranslations:
+    "Розширення вже є у списку. Вибраний стан збережено; повторний імпорт відновлює файли пакета.|The extension is already in the list. Your selection is preserved; reimport restores package files.|Расширение уже есть в списке. Выбранное состояние сохранено; повторный импорт восстанавливает файлы пакета.\nЛокальні розширення ZIP|Local ZIP extensions|Локальные расширения ZIP\nЛокальних розширень немає.|No local extensions.|Локальных расширений нет.\nУвімкнено|Enabled|Включено\nВидалити|Remove|Удалить\nДодати ZIP…|Add ZIP…|Добавить ZIP…\nПеревірка ZIP…|Checking ZIP…|Проверка ZIP…\nНекоректний ZIP. Виберіть пакет із manifest.json.|Invalid ZIP. Choose a package with manifest.json.|Некорректный ZIP. Выберите пакет с manifest.json.\nНесумісне розширення. Виберіть підтримуваний пакет Manifest V3.|Incompatible extension. Choose a supported Manifest V3 package.|Несовместимое расширение. Выберите поддерживаемый пакет Manifest V3.\nІдентифікатор розширення конфліктує з іншим пакетом. Виберіть інший ZIP.|The extension identity conflicts with another package. Choose a different ZIP.|Идентификатор расширения конфликтует с другим пакетом. Выберите другой ZIP.\nДосягнуто ліміт розширень. Видаліть зайві пакети.|Extension limit reached. Remove unused packages.|Достигнут лимит расширений. Удалите лишние пакеты.\nНе вдалося додати ZIP. Перевірте файл і повторіть.|Could not add ZIP. Check the file and try again.|Не удалось добавить ZIP. Проверьте файл и повторите.\nДодано до чернетки. Збережіть налаштування.|Added to draft. Save settings.|Добавлено в черновик. Сохраните настройки.\nВидалено з чернетки. Збережіть налаштування.|Removed from draft. Save settings.|Удалено из черновика. Сохраните настройки.\nДодавайте лише довірені розширення: вони можуть читати сторінки Steam. Збережіть налаштування й перевідкрийте активні профілі для застосування. Smart Trader керується окремо.|Only add trusted extensions: they can read Steam pages. Save settings and reopen active profiles to apply. Smart Trader is managed separately.|Добавляйте только доверенные расширения: они могут читать страницы Steam. Сохраните настройки и переоткройте активные профили для применения. Smart Trader управляется отдельно.",
   settingsGeneral: "Загальні",
   settingsGeneralHint: "Вигляд, системний трей і сповіщення",
   settingsSecurity: "Блокування та захист",
@@ -37,7 +50,8 @@ window.SmartLocaleData = Object.freeze({
 Автоматизація Steam|Steam automation|Автоматизация Steam
 Адміністратори Steam і перевірка блокувань|Steam administrators and ban checks|Администраторы Steam и проверка блокировок
 Є незбережені зміни|Unsaved changes|Есть несохранённые изменения`,
-  sessionAuthTranslations: "Сесію Steam не створено. Збережіть пароль акаунта або увійдіть у Steam вручну.|No Steam session is available. Save the account password or log in to Steam manually.|Сессия Steam не создана. Сохраните пароль аккаунта или войдите в Steam вручную.",
+  sessionAuthTranslations:
+    "Сесію Steam не створено. Збережіть пароль акаунта або увійдіть у Steam вручну.|No Steam session is available. Save the account password or log in to Steam manually.|Сессия Steam не создана. Сохраните пароль аккаунта или войдите в Steam вручную.",
   activeDataDirectory: "Папка даних програми",
   activeDataDirectoryHint: "Натисніть шлях, потім Ctrl+C, щоб скопіювати.",
   dataDirectoryTranslations: `Папка даних програми|App data directory|Папка данных программы
@@ -58,9 +72,12 @@ window.SmartLocaleData = Object.freeze({
   appUpdateCurrent: "Встановлено актуальну версію.",
   appUpdateAvailable: "Доступна нова версія.",
   appUpdateReady: "Оновлення перевірено та готове до перезапуску.",
-  appUpdateFileConflict: "У папці smart-auth-updates уже є інший файл із назвою цієї збірки. Перейменуйте його й повторіть завантаження.",
-  appUpdateBadDownload: "Розмір або контрольна сума файлу не збігається з релізом. Повторіть завантаження.",
-  appUpdateBackupFailed: "Не вдалося зберегти резервну копію сховища. Перевірте вільне місце та доступ до папки даних і повторіть спробу.",
+  appUpdateFileConflict:
+    "У папці smart-auth-updates уже є інший файл із назвою цієї збірки. Перейменуйте його й повторіть завантаження.",
+  appUpdateBadDownload:
+    "Розмір або контрольна сума файлу не збігається з релізом. Повторіть завантаження.",
+  appUpdateBackupFailed:
+    "Не вдалося зберегти резервну копію сховища. Перевірте вільне місце та доступ до папки даних і повторіть спробу.",
   appUpdateFailed:
     "Не вдалося виконати оновлення. Перевірте з’єднання та доступ до папки завантажень і повторіть дію. Якщо помилка лишається, перевірте оновлення знову.",
   appUpdateStorageNote:

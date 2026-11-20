@@ -273,6 +273,23 @@ class NetworkScheduler {
         code: "STEAM_RATE_LIMIT",
         noRetry: true,
         retryAfterMs: delay,
+        retryDelaySource:
+          Number.isFinite(seconds) || Number.isFinite(date)
+            ? "retry-after"
+            : "backoff",
+        endpointCategory:
+          target.hostname === "steamcommunity.com" &&
+          target.pathname.startsWith("/inventory/")
+            ? "inventory"
+            : applicationLimit ||
+                finalize ||
+                transfer ||
+                (target.hostname === "api.steampowered.com" &&
+                  /^\/IAuthenticationService\/[A-Za-z]+\/v1\/$/.test(
+                    target.pathname,
+                  ))
+              ? "authentication"
+              : "other",
         statusCode: response.statusCode,
         ...(applicationLimit ? { eresult: 84 } : {}),
       },

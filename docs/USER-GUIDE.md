@@ -1,16 +1,16 @@
 # smart-auth user guide
 
-**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.5 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
+**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.8 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
 
-This guide covers **0.14.4-beta.5**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
+This guide covers **0.14.4-beta.8**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
 
 Use is free of charge for personal and internal business purposes. Modifying, forking or redistributing smart-auth requires the author's prior written permission, subject to applicable law, third-party licenses and platform rights. See [LICENSE](../LICENSE) for complete terms.
 
 ## First launch and access
 
-Windows SmartScreen may show **Unknown publisher** for this unsigned beta. Use the project's [GitHub release](https://github.com/pythhon1c/smart-auth/releases/tag/v0.14.4-beta.5) and compare the EXE's SHA-256 with the same filename in `SHA256SUMS.txt` before deciding whether to run it. See [how to verify the download](BUILD.md#verify-a-downloaded-release).
+Windows SmartScreen may show **Unknown publisher** for this unsigned beta. Use the project's [GitHub release](https://github.com/pythhon1c/smart-auth/releases) and compare the EXE's SHA-256 with the same filename in `SHA256SUMS.txt` before deciding whether to run it. See [how to verify the download](BUILD.md#verify-a-downloaded-release).
 
-1. Run `smart-auth-0.14.4-beta.5-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
+1. Run `smart-auth-0.14.4-beta.8-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
 2. Enter and repeat a unique vault password of at least **15 characters**, then create the vault. On subsequent launches, enter the password to unlock it. This password is separate from your Steam passwords.
 3. The interface starts in the Windows display language for Ukrainian or Russian and in English for other languages. Its colors follow the Windows app theme. You can select a fixed language or theme on the sign-in screen or in Settings. Optionally configure login TOTP and a 6-12 digit PIN for the current open session.
 4. Create an encrypted vault backup after setup and important changes. Keep its access credentials and recovery materials separately.
@@ -100,6 +100,10 @@ Scheduling is disabled by default. Defaults are a 4-hour cycle, 3 parallel accou
 New internal storage accounts receive gift-acceptance mode; review this setting before starting. Known Community bans and detected game-specific restrictions can block sending. An unknown ban result does not mean that no ban exists.
 
 Watch the scheme's progress and action history. Sent means an offer was created; Delivered requires separate trade-result verification. Uncertain responses keep items reserved until reconciliation. Refreshing trade status reads Steam and does not resend the offer. UI lock does not stop active Loot; use the scheme's stop action or fully exit the application to stop it.
+
+Rate-limit events distinguish an observed server response from a request deferred locally by an existing cooldown. When available, the event shows the observed HTTP status or Steam EResult, a fixed endpoint category (inventory, authentication or other), and whether the wait came from Retry-After, scheduler backoff or an existing local cooldown. A local deferral has no invented HTTP status. An error during inventory preparation alone does not establish which request triggered the cooldown.
+
+The source-account restrictions check can encounter a rate limit before any inventory request. Loot retains the profile lookup's response and allows a retry after the applicable waits. Without Retry-After, the scheduler's initial backoff is 30 seconds; the existing 60-second throttle for an unsuccessful restrictions refresh also applies. Restrictions are checked again after the wait.
 
 ## Password manager and other-service 2FA
 

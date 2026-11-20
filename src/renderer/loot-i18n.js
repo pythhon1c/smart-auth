@@ -3,6 +3,12 @@ const lootI18nLocale = window.SmartLocaleData;
 window.LootI18n = (() => {
   let locale = "en";
   const words = new Map();
+  for (const line of lootI18nLocale.lootRateDiagnosticsTranslations.split(
+    "\n",
+  )) {
+    const [en, ua, ru] = line.split("|");
+    words.set(en, { en, ua, ru });
+  }
   for (const line of `${lootI18nLocale.translationTable_d4b6682}`.split("\n")) {
     const [en, ua, ru] = line.split("|");
     words.set(en, { en, ua, ru });
@@ -52,6 +58,13 @@ window.LootI18n = (() => {
             : "en";
     },
     t(key) {
+      const wait =
+        typeof key === "string" &&
+        new RegExp(lootI18nLocale.lootLocalCooldownPattern).exec(key);
+      if (wait && locale === "en")
+        return `Request deferred locally during an existing cooldown. Try again in ${wait[1]} seconds.`;
+      if (wait && locale === "ru")
+        return lootI18nLocale.lootLocalCooldownRu.replace("{seconds}", wait[1]);
       const message =
         typeof key === "string" ? permissionMessage.exec(key) : null;
       if (message && Number(message[2]) <= 2147483647) {

@@ -14,8 +14,10 @@ async function prepareSmartTraderNativePermission({
   platform = process.platform,
   spawnProcess = spawn,
 } = {}) {
+  const systemRoot = process.env.SystemRoot || "";
   if (
     platform !== "win32" ||
+    !/^[A-Za-z]:\\/.test(systemRoot) ||
     signal?.aborted ||
     !extensionName ||
     typeof extensionName !== "string" ||
@@ -65,7 +67,7 @@ async function prepareSmartTraderNativePermission({
       // localized manifest text and filesystem paths never become shell syntax.
       const command = `& { ${script}\n } -BrowserPid ${pid} -ProfilePath ${literal(profilePath)} -ExtensionName ${literal(extensionName)}`;
       child = spawnProcess(
-        "powershell.exe",
+        path.win32.join(systemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
         [
           "-NoLogo",
           "-NoProfile",

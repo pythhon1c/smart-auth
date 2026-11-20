@@ -3,3 +3,7 @@ allowBuilds:
   app-builder-bin: true
   electron-winstaller: false
   protobufjs: true
+
+overrides:
+  'fast-uri@^3.0.1': 3.1.9
+  'undici@^6.25.0': 6.29.1

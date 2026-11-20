@@ -208,7 +208,7 @@
   "message_b4f231d": "Steam не підтвердив особу учасника трейду",
   "message_d922ba7": "Журнал збору предметів заповнений або пошкоджений",
   "message_b8935da": "Потрібні SteamService та надійне збереження журналу",
-  "message_f9e4eeb": "Steam обмежив запити (HTTP 429). Спробуйте через ",
+  "message_f9e4eeb": "Запит відкладено локально через чинну паузу. Спробуйте через ",
   "message_d0b39ec": " с.",
   "steamTemporarilyLimitedRequestsHTTP429TryAgainLater": "Steam тимчасово обмежив запити (HTTP 429). Спробуйте пізніше.",
   "message_7e86bb7": "Схему збору видалено",

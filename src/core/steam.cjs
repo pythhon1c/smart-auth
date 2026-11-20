@@ -280,6 +280,7 @@ class SteamService {
     this.getBansApiKey = getBansApiKey;
     this.banRefreshes = new WeakMap();
     this.banAttemptAt = new WeakMap();
+    this.banRateLimits = new WeakMap();
     this.epoch = 0;
     this.sessions = new Map();
     this.offsets = new Map();
@@ -336,6 +337,7 @@ class SteamService {
     this.lootAuthFailures = new WeakMap();
     this.banRefreshes = new WeakMap();
     this.banAttemptAt = new WeakMap();
+    this.banRateLimits = new WeakMap();
   }
   async _request(account, url, options = {}, epoch = this.epoch) {
     this._assert(epoch);
@@ -358,10 +360,59 @@ class SteamService {
     }
     return normalizeAccountBans(account.bans);
   }
-  async lookupBans(routeAccount, steamId, { apiKey } = {}) {
+  _banRateLimit(account, steamId, observed = false) {
+    const values = this.banRateLimits.get(account);
+    const now = Date.now();
+    if (values)
+      for (const [id, value] of values)
+        if (value.until <= now) values.delete(id);
+    const value = values?.get(steamId);
+    if (!value) return null;
+    if (observed) return value.error;
+    return Object.assign(Error(localeText.validationMessage_ce6f28b), {
+      code: "STEAM_RATE_LIMIT",
+      noRetry: true,
+      requestDisposition: "deferred",
+      retryDelaySource: "local-cooldown",
+      retryAfterMs: value.until - now,
+      endpointCategory: value.error.endpointCategory,
+    });
+  }
+  _rememberBanRateLimit(account, steamId, error, endpointCategory) {
+    if (
+      error?.code !== "STEAM_RATE_LIMIT" &&
+      error?.statusCode !== 429 &&
+      !/HTTP 429\b/.test(error?.message || "")
+    )
+      return false;
+    error.endpointCategory = endpointCategory;
+    error.requestDisposition ||= "response";
+    if (!error.statusCode && /HTTP 429\b/.test(error.message || ""))
+      error.statusCode = 429;
+    const delay = Number.isFinite(error.retryAfterMs)
+      ? error.retryAfterMs
+      : 30000;
+    error.retryAfterMs = delay;
+    error.noRetry = true;
+    error.code = "STEAM_RATE_LIMIT";
+    let values = this.banRateLimits.get(account);
+    if (!values) this.banRateLimits.set(account, (values = new Map()));
+    values.set(steamId, { error, until: Date.now() + delay });
+    return true;
+  }
+  async lookupBans(
+    routeAccount,
+    steamId,
+    { apiKey, throwOnRateLimit = false } = {},
+  ) {
     if (!routeAccount || !/^765\d{14}$/.test(steamId))
       throw Error(localeText.message_c1a5be3);
     const epoch = this.epoch;
+    const cachedLimit = this._banRateLimit(routeAccount, steamId);
+    if (cachedLimit) {
+      if (throwOnRateLimit) throw cachedLimit;
+      return normalizeAccountBans();
+    }
     let observation = null;
     if (
       typeof this.transport.routes !== "function" ||
@@ -394,11 +445,11 @@ class SteamService {
       } catch (error) {
         this._assert(epoch);
         if (
-          error.code === "STEAM_RATE_LIMIT" ||
-          error.statusCode === 429 ||
-          /HTTP 429\b/.test(error.message)
-        )
+          this._rememberBanRateLimit(routeAccount, steamId, error, "ban-api")
+        ) {
+          if (throwOnRateLimit) throw error;
           return normalizeAccountBans();
+        }
       }
     }
     if (!observation) {
@@ -410,12 +461,23 @@ class SteamService {
           epoch,
         );
         observation = profileBansFromXml(response.body, steamId);
-      } catch {
+      } catch (error) {
         this._assert(epoch);
+        if (
+          this._rememberBanRateLimit(
+            routeAccount,
+            steamId,
+            error,
+            "profile-ban-check",
+          ) &&
+          throwOnRateLimit
+        )
+          throw error;
       }
     }
 
     this._assert(epoch);
+    if (observation) this.banRateLimits.get(routeAccount)?.delete(steamId);
     return observation
       ? mergeAccountBans(undefined, observation)
       : normalizeAccountBans();
@@ -474,16 +536,29 @@ class SteamService {
       }),
     );
   }
-  async refreshBans(account, { force = false, apiKey } = {}) {
+  async refreshBans(
+    account,
+    { force = false, apiKey, throwOnRateLimit = false } = {},
+  ) {
     if (!/^765\d{14}$/.test(account?.steamId))
       throw Error(localeText.message_c1a5be3);
     const epoch = this.epoch;
+    const finish = async (pending, observed = false) => {
+      const result = await pending;
+      const limit = this._banRateLimit(account, account.steamId, observed);
+      if (throwOnRateLimit && limit) throw limit;
+      return result;
+    };
     const prior = normalizeAccountBans(account.bans),
       now = Date.now();
-    if (this.banRefreshes.has(account)) return this.banRefreshes.get(account);
+    if (this.banRefreshes.has(account))
+      return finish(this.banRefreshes.get(account), true);
+    if (throwOnRateLimit && this._banRateLimit(account, account.steamId))
+      return finish(prior);
     const effectiveKey = apiKey ?? (await this.getBansApiKey(account));
     this._assert(epoch);
-    if (this.banRefreshes.has(account)) return this.banRefreshes.get(account);
+    if (this.banRefreshes.has(account))
+      return finish(this.banRefreshes.get(account), true);
     const keyed =
       typeof effectiveKey === "string" &&
       /^[a-fA-F0-9]{32}$/.test(effectiveKey);
@@ -500,13 +575,15 @@ class SteamService {
           now - last.at <
             (last.success && !needsAuthoritative ? 6 * 3600000 : 60000)))
     )
-      return prior;
+      return finish(prior);
     this.banAttemptAt.set(account, { at: now, keyed });
     const task = (async () => {
       const observation = await this.lookupBans(account, account.steamId, {
         apiKey: effectiveKey,
       });
       this._assert(epoch);
+      const limited = this.banRateLimits.get(account)?.get(account.steamId);
+      if (limited) limited.until = Math.max(limited.until, now + 60000);
       if (observation.checkedAt)
         this.banAttemptAt.set(account, { at: now, keyed, success: true });
       return observation.checkedAt
@@ -517,7 +594,7 @@ class SteamService {
         this.banRefreshes.delete(account);
     });
     this.banRefreshes.set(account, task);
-    return task;
+    return finish(task, true);
   }
   async fetchAvatar(account) {
     const epoch = this.epoch;
@@ -1012,11 +1089,17 @@ class SteamService {
       assertCurrent();
       // A loot caller joining ordinary session preparation still needs its
       // route-readiness policy before proceeding with loot operations.
-      if (options.verifyRoute && !task.verifyRoute &&
-          typeof this.transport.ensureRoute === "function") {
+      if (
+        options.verifyRoute &&
+        !task.verifyRoute &&
+        typeof this.transport.ensureRoute === "function"
+      ) {
         options.onPhase?.("proxy");
         await this.transport.ensureRoute(account, {
-          assertCurrent: () => { this._assert(epoch); assertCurrent(); },
+          assertCurrent: () => {
+            this._assert(epoch);
+            assertCurrent();
+          },
           onDetail: options.onDetail,
         });
         this._assert(epoch);
@@ -1050,7 +1133,8 @@ class SteamService {
         try {
           await this.onChange(account);
         } catch (error) {
-          if (account.mafile.Session === next) account.mafile.Session = previous;
+          if (account.mafile.Session === next)
+            account.mafile.Session = previous;
           error.lootFatal = true;
           throw error;
         }
@@ -1070,7 +1154,12 @@ class SteamService {
   }
   async _prepareSession(
     account,
-    { assertCurrent = () => {}, onPhase = () => {}, onDetail, verifyRoute = false } = {},
+    {
+      assertCurrent = () => {},
+      onPhase = () => {},
+      onDetail,
+      verifyRoute = false,
+    } = {},
   ) {
     const epoch = this.epoch;
     const guard = () => {
@@ -1684,7 +1773,10 @@ class SteamService {
       await this._ensureTime(account);
       this._assert(epoch);
       assertCurrent();
-      await this.ensureSession(account, { assertCurrent, cookieSession: false });
+      await this.ensureSession(account, {
+        assertCurrent,
+        cookieSession: false,
+      });
       this._assert(epoch);
       assertCurrent();
       const current = this.confirmations.get(account.id)?.get(id);

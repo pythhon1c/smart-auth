@@ -221,6 +221,7 @@ let win,
   pendingTrayReview = null;
 const { AsyncLocalStorage } = require("node:async_hooks");
 const uiRequests = new AsyncLocalStorage();
+let quitReady = false, quitPending = false;
 const pendingExtensionImports = new Map();
 let localBrowserExtensions,
   extensionPickerOpen = false,
@@ -284,7 +285,7 @@ function uiChangedPayload() {
   return uiStatus();
 }
 function revealAcknowledged(window) {
-  if (!window || window.isDestroyed()) return;
+  if (quitPending || !window || window.isDestroyed() || window.webContents.isDestroyed()) return;
   if (
     uiStatus().locked &&
     lockAcknowledged.get(window.webContents.id) !== uiGeneration
@@ -293,8 +294,9 @@ function revealAcknowledged(window) {
     return;
   }
   if (window.isMinimized()) window.restore();
+  if (quitPending || window.isDestroyed() || window.webContents.isDestroyed()) return;
   window.show();
-  window.focus();
+  if (!quitPending && !window.isDestroyed()) window.focus();
 }
 async function uiRequest(event, action, payload, execute, main = false) {
   checkInput(action, payload);
@@ -302,7 +304,7 @@ async function uiRequest(event, action, payload, execute, main = false) {
   const generation = uiGeneration;
   if (action === "status") return uiStatus();
   if (action === "lockedReady") {
-    if (payload?.uiGeneration !== uiGeneration || !uiStatus().locked)
+    if (quitPending || payload?.uiGeneration !== uiGeneration || !uiStatus().locked)
       return null;
     lockAcknowledged.set(event.sender.id, uiGeneration);
     if (showAfterLock.delete(event.sender.id))
@@ -1189,7 +1191,9 @@ async function prepareBulkConfirmations(data, p) {
       kind: p.kind,
       epoch,
       generation: bulkGeneration,
-      expires: Date.now() + 5 * 60 * 1000,
+      // Enumeration is cancellable but is not a review yet. Arm the finite
+      // review lifetime only when every account has finished below.
+      expires: Infinity,
       phase: "preparing",
       state: "running",
       entries: [],
@@ -4499,8 +4503,6 @@ else {
     });
 }
 app.on("window-all-closed", () => app.quit());
-let quitReady = false,
-  quitPending = false;
 app.on("before-quit", (event) => {
   if (quitReady) return;
   event.preventDefault();
