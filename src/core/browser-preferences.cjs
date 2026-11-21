@@ -95,6 +95,7 @@ function prepareBrowserPreferences(
   {
     systemLocale = Intl.DateTimeFormat().resolvedOptions().locale,
     browserProfile,
+    accountLogin,
   } = {},
 ) {
   const selected = normalizeBrowserSettings(settings);
@@ -184,6 +185,7 @@ function prepareBrowserPreferences(
     enable_do_not_track: browserProfile?.doNotTrack || false,
     session: { restore_on_startup: 5, startup_urls: [] },
     profile: {
+      ...(accountLogin ? { name: accountLogin, using_default_name: false } : {}),
       exit_type: "Normal",
       exited_cleanly: true,
       default_content_setting_values: {
@@ -214,6 +216,15 @@ function prepareBrowserPreferences(
   }
   const localState = merge(read("Local State"), {
     intl: { app_locale: locale },
+    ...(accountLogin
+      ? {
+          profile: {
+            info_cache: {
+              Default: { name: accountLogin, is_using_default_name: false },
+            },
+          },
+        }
+      : {}),
   });
   const bookmarkPath = "Default/Bookmarks";
   const fresh = !fs.existsSync(path.join(root, bookmarkPath));

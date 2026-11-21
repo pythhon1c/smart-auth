@@ -16,6 +16,7 @@ const {
 } = require("./smart-trader-onboarding.cjs");
 const { normalizeBrowserSettings } = require("./model.cjs");
 const { prepareBrowserPreferences } = require("./browser-preferences.cjs");
+const { startBrowserWindowBranding } = require("./browser-window-branding.cjs");
 const {
   createBrowserProfile,
   normalizeBrowserProfile,
@@ -23,6 +24,38 @@ const {
   applyBrowserProfile,
 } = require("./browser-profile.cjs");
 const { createBrowserProxy } = require("./browser-proxy.cjs");
+
+async function attachAccountTaskbar(
+  context,
+  { profilePath, executablePath, profileKey, displayName, signal },
+) {
+  if (process.platform !== "win32" || !displayName || signal.aborted) return;
+  let session;
+  try {
+    session = await context.browser().newBrowserCDPSession();
+    const { processInfo } = await session.send("SystemInfo.getProcessInfo");
+    const pid = processInfo.find((item) => item.type === "browser")?.id;
+    if (!Number.isSafeInteger(pid) || pid <= 0 || signal.aborted) return;
+    const suffix = crypto
+      .createHash("sha256")
+      .update(displayName)
+      .digest("hex")
+      .slice(0, 16);
+    startBrowserWindowBranding({
+      pid,
+      profilePath,
+      executablePath,
+      displayName,
+      signal,
+      iconPath: path.join(profilePath, `smart-auth-${suffix}.ico`),
+      appId: "SmartAuth.Browser." + profileKey.slice(0, 24),
+    });
+  } catch {
+    // Shell decorations are optional when Windows or the browser is shutting down.
+  } finally {
+    await session?.detach().catch(() => {});
+  }
+}
 const failure = () =>
   Error(localeText.couldNotOpenTheProtectedBrowserCheckTheProxyAndSteamSession);
 const extensionFailure = () =>
@@ -740,11 +773,16 @@ class BrowserSessions {
       e.lock = fs.openSync(lockFile, "wx", 0o600);
     }
     fs.writeFileSync(e.lock, String(process.pid));
+    const accountLogin = e.account.mafile?.account_name || e.account.name;
     const preferences = prepareBrowserPreferences(
       e.profile,
       browserSettings,
       prepared.extensions || [],
-      { systemLocale: this.getSystemLocale(), browserProfile: configuration },
+      {
+        systemLocale: this.getSystemLocale(),
+        browserProfile: configuration,
+        accountLogin,
+      },
     );
     const profileOptions = browserProfileLaunchOptions(configuration, {
       locale: preferences.locale,
@@ -790,6 +828,13 @@ class BrowserSessions {
       e.launching = false;
     }
     this._assert(e);
+    void attachAccountTaskbar(e.context, {
+      profilePath: e.profile,
+      executablePath: this.executablePath,
+      profileKey: key,
+      displayName: accountLogin,
+      signal: e.abort.signal,
+    });
     if (configuration.doNotTrack)
       await e.context.setExtraHTTPHeaders({ DNT: "1" });
     await applyBrowserProfile(e.context, configuration);
@@ -860,4 +905,4 @@ class BrowserSessions {
     return { proxyId: e.proxy.id, sessionReady: true };
   }
 }
-module.exports = { BrowserSessions, maximizeBrowserWindow };
+module.exports = { BrowserSessions, maximizeBrowserWindow, attachAccountTaskbar };

@@ -166,6 +166,15 @@ const { AuthenticatorManager } = require("./core/authenticator-manager.cjs");
 const { readAuthenticatorFiles } = require("./core/authenticator-files.cjs");
 const { createTrayController } = require("./core/tray.cjs");
 const appIconPath = path.join(__dirname, "assets", "app-icon.png");
+const { appUserModelId, windowAppDetails } = require("./core/window-identity.cjs");
+
+function createAppWindow(options) {
+  // Write shell relaunch metadata before Windows can expose the taskbar button.
+  const window = new BrowserWindow({ ...options, show: false });
+  if (process.platform === "win32") window.setAppDetails(windowAppDetails(app));
+  if (options.show !== false) window.show();
+  return window;
+}
 
 const { configureAppIdentity } = require("./core/app-identity.cjs");
 configureAppIdentity(app);
@@ -3886,7 +3895,7 @@ async function openLoot(schemeId) {
     return;
   }
   const captured = epoch;
-  const window = new BrowserWindow({
+  const window = createAppWindow({
     width: 1180,
     height: 820,
     minWidth: 420,
@@ -4011,7 +4020,7 @@ async function openPasswordManager() {
     return;
   }
   const captured = epoch;
-  const window = new BrowserWindow({
+  const window = createAppWindow({
     width: 1180,
     height: 820,
     minWidth: 540,
@@ -4133,7 +4142,7 @@ async function openAuthenticator() {
     return;
   }
   const captured = epoch;
-  const window = new BrowserWindow({
+  const window = createAppWindow({
     width: 1180,
     height: 820,
     minWidth: 540,
@@ -4246,7 +4255,7 @@ async function openAuthenticator() {
   }
 }
 async function createWindow() {
-  win = new BrowserWindow({
+  win = createAppWindow({
     width: 1280,
     height: 860,
     minWidth: 380,
@@ -4347,7 +4356,7 @@ else {
     .then(async () => {
       systemLanguage = detectSystemLanguage(app);
       if (process.platform === "win32")
-        app.setAppUserModelId("app.smartsda.desktop");
+        app.setAppUserModelId(appUserModelId(app));
       vault = new Vault(path.join(app.getPath("userData"), "smart-sda.vault"), {
         systemLanguage: () => systemLanguage,
         protectKey: (text) => {

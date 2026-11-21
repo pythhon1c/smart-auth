@@ -1,8 +1,8 @@
 # smart-auth user guide
 
-**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.9 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
+**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.10 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
 
-This guide covers **0.14.4-beta.9**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
+This guide covers **0.14.4-beta.10**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
 
 Use is free of charge for personal and internal business purposes. Modifying, forking or redistributing smart-auth requires the author's prior written permission, subject to applicable law, third-party licenses and platform rights. See [LICENSE](../LICENSE) for complete terms.
 
@@ -10,7 +10,7 @@ Use is free of charge for personal and internal business purposes. Modifying, fo
 
 Windows SmartScreen may show **Unknown publisher** for this unsigned beta. Use the project's [GitHub release](https://github.com/pythhon1c/smart-auth/releases) and compare the EXE's SHA-256 with the same filename in `SHA256SUMS.txt` before deciding whether to run it. See [how to verify the download](BUILD.md#verify-a-downloaded-release).
 
-1. Run `smart-auth-0.14.4-beta.9-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
+1. Run `smart-auth-0.14.4-beta.10-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
 2. Enter and repeat a unique vault password of at least **15 characters**, then create the vault. On subsequent launches, enter the password to unlock it. This password is separate from your Steam passwords.
 3. The interface starts in the Windows display language for Ukrainian or Russian and in English for other languages. Its colors follow the Windows app theme. You can select a fixed language or theme on the sign-in screen or in Settings. Optionally configure login TOTP and a 6-12 digit PIN for the current open session.
 4. Create an encrypted vault backup after setup and important changes. Keep its access credentials and recovery materials separately.
@@ -73,9 +73,13 @@ Account settings separately control periodic checks, notifications, and automati
 
 Incoming-offer watching and automatic gift acceptance are separate settings, disabled by default. They inspect both sides of an offer. An uncertain response is not treated as success. Adding a Steam administrator grants broader authority: accounts with incoming watching can also accept two-sided trades and outgoing-item transfers from that administrator. Add only Steam identities whose authority you intend to grant.
 
+Packaged smart-auth uses its own Windows taskbar identity, separate from development launches. If an older pinned shortcut retains its previous icon or taskbar group after upgrading, launch the new portable executable, unpin the older shortcut, and pin the running smart-auth application again.
+
 ## Account browsers
 
 Open the browser from an account or for selected accounts. First use shows the pinned Google Chrome for Testing version, source, and Google terms. Accept to download directly from Google; download and extraction progress is displayed. Declining leaves it uninstalled, and failed or cancelled downloads can be retried. The verified versioned cache lives with application data, separately from account profiles. Later launches reuse it without another download. Updating the runtime preserves existing account browser profiles. Each uses its own saved Chromium profile, session, and checked proxy. The simultaneous-account limit defaults to 10 and is configurable from 1 to 100. Browser settings control extensions, language, theme, and related preferences.
+
+Each managed Chrome profile uses the full Steam login as its profile name and Windows taskbar group label. A colored two-letter account monogram helps distinguish accounts on the taskbar. Close and reopen existing account browsers after upgrading to apply the updated name and taskbar identity.
 
 The independent browser web session is enabled by default. Its first sign-in needs a saved Steam password. Valid web tokens are reused without overwriting the mobile authenticator session. Additional Steam challenges are not bypassed. Independent web-session mode and authenticator-session mode have separate persistent browser directories. Changing relevant settings may close active browsers.
 
