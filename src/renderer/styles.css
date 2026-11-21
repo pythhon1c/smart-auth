@@ -1432,6 +1432,17 @@ dialog::backdrop {
 .modal-body > form {
   margin: 0;
 }
+.import-source-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-block: 12px;
+}
+.import-source-picker .muted {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .modal-body > :first-child:not(label) {
   margin-top: 16px;
 }

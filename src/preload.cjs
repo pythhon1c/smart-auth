@@ -125,6 +125,7 @@ const actions = new Set([
   "cancelPortableImport",
   "activity",
   "importAccounts",
+  "pickAccountImportSource",
   "prepareAccountImport",
   "commitAccountImport",
   "cancelAccountImport",

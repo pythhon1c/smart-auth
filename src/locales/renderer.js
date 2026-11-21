@@ -107,6 +107,13 @@ window.SmartLocaleData = Object.freeze({
 Перевірений новий EXE зберігається поруч зі старим у Downloads/smart-auth-updates, не перезаписуючи його.|The verified new EXE is saved alongside the old one in Downloads/smart-auth-updates without overwriting it.|Проверенный новый EXE сохраняется рядом со старым в Downloads/smart-auth-updates, не перезаписывая его.
 Натискання «Перезапустити в новій версії» створить резервну копію та закриє активні завдання програми.|Clicking “Restart in new version” creates a backup and closes active app tasks.|Нажатие «Перезапустить в новой версии» создаст резервную копию и закроет активные задачи программы.`,
   oneMafile: "Один .maFile",
+  chooseImportMaFile: "Вибрати .maFile",
+  chooseImportFiles: "Вибрати файли",
+  chooseImportFolder: "Вибрати папку",
+  noImportFile: "Файл не вибрано",
+  noImportFiles: "Файли не вибрано",
+  noImportFolder: "Папку не вибрано",
+  importSelectedCount: "Вибрано файлів: {count}",
   optionalSteamPassword: "Пароль Steam (необов’язково)",
   optionalDedicatedProxy: "Окремий проксі (необов’язково)",
   singleImportDetailsHelp:
@@ -115,6 +122,13 @@ window.SmartLocaleData = Object.freeze({
     "Проксі: host:port, host:port:user:password або http://user:password@host:port. Для SOCKS5 виберіть відповідний протокол.",
   dedicatedProxyWillBeAssigned: "Акаунту буде призначено окремий проксі.",
   singleImportTranslations: `Один .maFile|One .maFile|Один .maFile
+Вибрати .maFile|Choose .maFile|Выбрать .maFile
+Вибрати файли|Choose files|Выбрать файлы
+Вибрати папку|Choose folder|Выбрать папку
+Файл не вибрано|No file selected|Файл не выбран
+Файли не вибрано|No files selected|Файлы не выбраны
+Папку не вибрано|No folder selected|Папка не выбрана
+Вибрано файлів: {count}|Files selected: {count}|Выбрано файлов: {count}
 Пароль Steam (необов’язково)|Steam password (optional)|Пароль Steam (необязательно)
 Окремий проксі (необов’язково)|Dedicated proxy (optional)|Отдельный прокси (необязательно)
 Виберіть один .maFile. Пароль Steam та окремий проксі можна залишити порожніми.|Choose one .maFile. Steam password and dedicated proxy can both be left empty.|Выберите один .maFile. Пароль Steam и отдельный прокси можно оставить пустыми.

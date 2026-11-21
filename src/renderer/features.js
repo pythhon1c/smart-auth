@@ -778,6 +778,68 @@ function importAccountsDialog() {
         "single",
       ),
     );
+    let selection = null;
+    let sourceRevision = 0;
+    let choosing = false;
+    let reviewing = false;
+    const sourceLabels = {
+      single: [featuresLocale.chooseImportMaFile, featuresLocale.noImportFile],
+      files: [featuresLocale.chooseImportFiles, featuresLocale.noImportFiles],
+      folder: [
+        featuresLocale.chooseImportFolder,
+        featuresLocale.noImportFolder,
+      ],
+    };
+    const selectedSource = el("span", "muted");
+    selectedSource.id = "selectedImportSource";
+    selectedSource.setAttribute("role", "status");
+    const forgetSelection = () => {
+      sourceRevision++;
+      if (selection) {
+        void call("cancelAccountImport", {
+          selectionToken: selection.selectionToken,
+        }).catch(() => {});
+        selection = null;
+      }
+    };
+    const pick = btn(sourceLabels.single[0], async () => {
+      const revision = sourceRevision;
+      choosing = true;
+      syncSource();
+      try {
+        const result = await call("pickAccountImportSource", {
+          mode: mode.value,
+        });
+        if (!result?.selectionToken) return;
+        if (
+          revision !== sourceRevision ||
+          !f.isConnected ||
+          !modal.open ||
+          locked
+        ) {
+          await call("cancelAccountImport", {
+            selectionToken: result.selectionToken,
+          }).catch(() => {});
+          return;
+        }
+        selection = result;
+      } finally {
+        choosing = false;
+        syncSource();
+      }
+    });
+    pick.id = "pickImportSource";
+    pick.setAttribute("aria-describedby", selectedSource.id);
+    const sourceRow = append(
+      el("div", "import-source-picker"),
+      pick,
+      selectedSource,
+    );
+    f.append(sourceRow);
+    const openPortable = () => {
+      forgetSelection();
+      portableImportDialog();
+    };
     const formatOptions = el("div");
     f.append(formatOptions);
     const format = field(
@@ -798,9 +860,8 @@ function importAccountsDialog() {
       ),
     );
     format.onchange = () => {
-      if (format.value === "portable") portableImportDialog();
+      if (format.value === "portable") openPortable();
     };
-    f.append(btn(featuresLocale.importSmartSDA, portableImportDialog));
     formatOptions.append(
       el(
         "p",
@@ -815,8 +876,10 @@ function importAccountsDialog() {
         featuresLocale.autoDetectChecksStructureSIHNebulaSDADepsNanSelectTheExpectedFormatIncompatible,
       ),
     );
+    const destination = el("div");
+    f.append(destination);
     const folder = field(
-      f,
+      destination,
       featuresLocale.folder,
       select(
         [
@@ -878,29 +941,55 @@ function importAccountsDialog() {
       ),
     );
     f.append(wrap);
-    wrap.hidden = true;
+    f.append(btn(featuresLocale.importSmartSDA, openPortable));
+    function syncSource() {
+      const fileMode = mode.value !== "text";
+      sourceRow.hidden = !fileMode;
+      if (fileMode) {
+        const [label, emptyLabel] = sourceLabels[mode.value];
+        pick.textContent = t(label);
+        selectedSource.textContent = selection
+          ? selection.fileName
+          : t(emptyLabel);
+        if (selection?.count > 1) {
+          const count = t(featuresLocale.importSelectedCount).replace(
+            "{count}",
+            selection.count,
+          );
+          selectedSource.textContent += " · " + count;
+        }
+      } else selectedSource.textContent = "";
+      pick.disabled = choosing || reviewing;
+      review.disabled = choosing || reviewing || (fileMode && !selection);
+    }
     mode.onchange = () => {
+      forgetSelection();
       const single = mode.value === "single";
       if (!single) loginPassword.value = proxyText.value = "";
       singleDetails.hidden = !single;
       formatOptions.hidden = allocationBox.hidden = single;
       wrap.hidden = mode.value !== "text";
-      folder.disabled = mode.value === "folder";
+      destination.hidden = mode.value === "folder";
+      syncSource();
     };
-    mode.onchange();
-    footer(
+    const review = footer(
       f,
       async () => {
         const generation = lockGeneration,
           dialogGeneration = sensitiveDialogGeneration,
           submittedMode = mode.value,
+          revision = sourceRevision,
           submittedAllocation =
             submittedMode === "single" ? {} : allocationOptions();
         let preview;
+        if (submittedMode !== "text" && !selection) return;
+        reviewing = true;
+        syncSource();
         try {
           preview = await call("prepareAccountImport", {
             ...banOptions(),
             mode: submittedMode,
+            ...(selection ? { selectionToken: selection.selectionToken } : {}),
             format: submittedMode === "single" ? "sda" : format.value,
             ...(submittedMode === "single"
               ? {
@@ -912,14 +1001,17 @@ function importAccountsDialog() {
             groupId: submittedMode === "folder" ? null : folder.value || null,
             ...(submittedMode === "text" ? { text: text.value } : {}),
           });
-          loginPassword.value = proxyText.value = "";
         } finally {
           text.value = "";
+          reviewing = false;
+          syncSource();
         }
         if (
           locked ||
           generation !== lockGeneration ||
           dialogGeneration !== sensitiveDialogGeneration ||
+          revision !== sourceRevision ||
+          !modal.open ||
           !f.isConnected
         ) {
           if (preview?.token)
@@ -932,12 +1024,17 @@ function importAccountsDialog() {
           return;
         }
         if (preview?.cancelled || preview?.canceled) return;
+        selection = null;
+        loginPassword.value = proxyText.value = "";
         if (preview.format === "tbs")
           showPortableImportReview(preview, submittedAllocation);
         else showImportReview(preview, submittedAllocation);
       },
       featuresLocale.reviewBeforeImport,
     );
+    pick.syncDisabled = review.syncDisabled = syncSource;
+    mode.onchange();
+    afterDialogCloses(forgetSelection);
   });
 }
 function showImportReview(preview, allocationOptions = {}) {
@@ -1713,9 +1810,11 @@ function appUpdateSettingsCard() {
   function showResult() {
     let message = featuresLocale.appUpdateAvailable;
     if (state === "ready") message = featuresLocale.appUpdateReady;
-    if (state === "current") message = lastUpdateCheck.latestVersion === data.appVersion
-      ? featuresLocale.appUpdateCurrent
-      : featuresLocale.appUpdateNoNewer;
+    if (state === "current")
+      message =
+        lastUpdateCheck.latestVersion === data.appVersion
+          ? featuresLocale.appUpdateCurrent
+          : featuresLocale.appUpdateNoNewer;
     status.textContent = t(message);
     showVersions();
   }
@@ -1745,7 +1844,9 @@ function appUpdateSettingsCard() {
           lastUpdateCheck.state = state;
         }
         status.className = "error";
-        status.textContent = t(reasons[result.code] || featuresLocale.appUpdateFailed);
+        status.textContent = t(
+          reasons[result.code] || featuresLocale.appUpdateFailed,
+        );
         return;
       }
       if (action === "restartForAppUpdate") {
@@ -1812,9 +1913,14 @@ function settingsSection(key, title, description, cards) {
   section.dataset.settingsSection = key;
   section.open = settingsSectionState.get(key) ?? false;
   const summary = el("summary", "settings-section-summary");
-  summary.append(el("span", "settings-section-title", title), el("span", "settings-section-description", description));
+  summary.append(
+    el("span", "settings-section-title", title),
+    el("span", "settings-section-description", description),
+  );
   section.append(summary, append(el("div", "settings-section-body"), ...cards));
-  section.addEventListener("toggle", () => settingsSectionState.set(key, section.open));
+  section.addEventListener("toggle", () =>
+    settingsSectionState.set(key, section.open),
+  );
   return section;
 }
 function settingsPage(main) {
@@ -2234,7 +2340,9 @@ function settingsPage(main) {
   storeReference.className = "browser-smart-trader-store";
   storeReference.onclick = () => storeReference.select();
   browser.append(pinned);
-  const localExtensions = browserLocalExtensionsEditor(data.settings.browserLocalExtensions || []);
+  const localExtensions = browserLocalExtensionsEditor(
+    data.settings.browserLocalExtensions || [],
+  );
   browser.append(localExtensions.node);
   const extensions = field(
     browser,
@@ -2350,11 +2458,36 @@ function settingsPage(main) {
   append(
     layout,
     appInfo,
-    settingsSection("general", featuresLocale.settingsGeneral, featuresLocale.settingsGeneralHint, [appearance, tray, notifications]),
-    settingsSection("security", featuresLocale.settingsSecurity, featuresLocale.settingsSecurityHint, [locking, append(securitySettingsCard(true), hideSecurityNotice.node)]),
-    settingsSection("network", featuresLocale.settingsNetwork, featuresLocale.settingsNetworkHint, [behavior, performance]),
-    settingsSection("browser", featuresLocale.chromiumBrowser, featuresLocale.settingsBrowserHint, [browser]),
-    settingsSection("automation", featuresLocale.settingsAutomation, featuresLocale.settingsAutomationHint, [steamAdminsSettingsCard(), banApiSettingsCard()]),
+    settingsSection(
+      "general",
+      featuresLocale.settingsGeneral,
+      featuresLocale.settingsGeneralHint,
+      [appearance, tray, notifications],
+    ),
+    settingsSection(
+      "security",
+      featuresLocale.settingsSecurity,
+      featuresLocale.settingsSecurityHint,
+      [locking, append(securitySettingsCard(true), hideSecurityNotice.node)],
+    ),
+    settingsSection(
+      "network",
+      featuresLocale.settingsNetwork,
+      featuresLocale.settingsNetworkHint,
+      [behavior, performance],
+    ),
+    settingsSection(
+      "browser",
+      featuresLocale.chromiumBrowser,
+      featuresLocale.settingsBrowserHint,
+      [browser],
+    ),
+    settingsSection(
+      "automation",
+      featuresLocale.settingsAutomation,
+      featuresLocale.settingsAutomationHint,
+      [steamAdminsSettingsCard(), banApiSettingsCard()],
+    ),
   );
   // Keep each label and its control together as cards reflow.
   layout.querySelectorAll("label[for]").forEach((caption) => {
@@ -2370,15 +2503,26 @@ function settingsPage(main) {
   draftStatus.setAttribute("role", "status");
   const initialValues = JSON.stringify(values());
   const updateDraftStatus = () => {
-    draftStatus.textContent = t(JSON.stringify(values()) === initialValues ? "" : featuresLocale.settingsUnsaved);
+    draftStatus.textContent = t(
+      JSON.stringify(values()) === initialValues
+        ? ""
+        : featuresLocale.settingsUnsaved,
+    );
   };
   layout.addEventListener("input", updateDraftStatus);
   layout.addEventListener("change", updateDraftStatus);
   layout.addEventListener("click", updateDraftStatus);
-  saveBar.append(draftStatus, btn(featuresLocale.saveSettings, async () => {
-    await save();
-    toast(featuresLocale.settingsSaved);
-  }, "primary"));
+  saveBar.append(
+    draftStatus,
+    btn(
+      featuresLocale.saveSettings,
+      async () => {
+        await save();
+        toast(featuresLocale.settingsSaved);
+      },
+      "primary",
+    ),
+  );
   main.append(saveBar);
 }
 function activityPage(main) {

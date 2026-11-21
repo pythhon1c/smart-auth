@@ -1,8 +1,8 @@
 # smart-auth user guide
 
-**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.8 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
+**BETA — still under testing. Use at your own risk.** Version 0.14.4-beta.9 may cause loss of data, items, balances or account access. Keep an independent backup and review automation settings before use.
 
-This guide covers **0.14.4-beta.8**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
+This guide covers **0.14.4-beta.9**, Windows x64. smart-auth manages existing Steam authenticators, codes for other services, and a local password manager. It does not enroll, transfer, or revoke Steam Mobile Authenticators or perform SMS registration. For source builds, see [BUILD.md](BUILD.md).
 
 Use is free of charge for personal and internal business purposes. Modifying, forking or redistributing smart-auth requires the author's prior written permission, subject to applicable law, third-party licenses and platform rights. See [LICENSE](../LICENSE) for complete terms.
 
@@ -10,7 +10,7 @@ Use is free of charge for personal and internal business purposes. Modifying, fo
 
 Windows SmartScreen may show **Unknown publisher** for this unsigned beta. Use the project's [GitHub release](https://github.com/pythhon1c/smart-auth/releases) and compare the EXE's SHA-256 with the same filename in `SHA256SUMS.txt` before deciding whether to run it. See [how to verify the download](BUILD.md#verify-a-downloaded-release).
 
-1. Run `smart-auth-0.14.4-beta.8-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
+1. Run `smart-auth-0.14.4-beta.9-win-x64.exe`. Node.js and pnpm are not required. First account-browser installation requires an internet connection.
 2. Enter and repeat a unique vault password of at least **15 characters**, then create the vault. On subsequent launches, enter the password to unlock it. This password is separate from your Steam passwords.
 3. The interface starts in the Windows display language for Ukrainian or Russian and in English for other languages. Its colors follow the Windows app theme. You can select a fixed language or theme on the sign-in screen or in Settings. Optionally configure login TOTP and a 6-12 digit PIN for the current open session.
 4. Create an encrypted vault backup after setup and important changes. Keep its access credentials and recovery materials separately.
@@ -31,9 +31,9 @@ The previous portable EXE remains available. For subsequent manual launches, use
 
 ## Import Steam accounts
 
-Open Import, select a format, and choose pasted text, one or more files, or a folder. Review the summary, warnings, destination folder, and duplicate policy before applying the import. Cancel discards the prepared changes.
+Open Import and select a format and source. For file input, use the file picker button to choose one or more files; for bulk folder input, use the folder picker button and choose the folder containing the import files. Check the selected file, the first filename and total for multiple files, or the selected folder shown in the dialog before selecting **Review**. Review the summary, warnings, destination folder, and duplicate policy, then select **Apply**. Cancel discards the prepared changes.
 
-For a single authenticator file, choose **One .maFile** as the source. Enter the optional Steam password and an optional individual proxy, select the destination folder, then choose the file and review the import. Proxy examples include `host:port:login:password` and `http://login:password@host:port`. Choose the matching protocol for an address without a scheme. The individual proxy belongs to that account. Leaving it blank uses the folder's configured allocation rules. Leaving the password blank preserves a compatible password supplied by the file.
+For a single authenticator file, choose **One .maFile** as the source. Select **Choose .maFile** to open the native file picker and select one file. Enter the optional Steam password and an optional individual proxy, select the destination folder, then select **Review**. Check the prepared import and select **Apply** to save it. Proxy examples include `host:port:login:password` and `http://login:password@host:port`. Choose the matching protocol for an address without a scheme. The individual proxy belongs to that account. Leaving it blank uses the folder's configured allocation rules. Leaving the password blank preserves a compatible password supplied by the file.
 
 Supported inputs include:
 

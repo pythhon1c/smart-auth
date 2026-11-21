@@ -194,6 +194,8 @@ let win,
   nextPoll = 0,
   pollCursor = 0,
   pendingImport = null,
+  pendingImportSelection = null,
+  importSelectionGeneration = 0,
   importGeneration = 0,
   pendingBulk = null,
   bulkConfirmationJob = null,
@@ -221,7 +223,8 @@ let win,
   pendingTrayReview = null;
 const { AsyncLocalStorage } = require("node:async_hooks");
 const uiRequests = new AsyncLocalStorage();
-let quitReady = false, quitPending = false;
+let quitReady = false,
+  quitPending = false;
 const pendingExtensionImports = new Map();
 let localBrowserExtensions,
   extensionPickerOpen = false,
@@ -285,7 +288,13 @@ function uiChangedPayload() {
   return uiStatus();
 }
 function revealAcknowledged(window) {
-  if (quitPending || !window || window.isDestroyed() || window.webContents.isDestroyed()) return;
+  if (
+    quitPending ||
+    !window ||
+    window.isDestroyed() ||
+    window.webContents.isDestroyed()
+  )
+    return;
   if (
     uiStatus().locked &&
     lockAcknowledged.get(window.webContents.id) !== uiGeneration
@@ -294,7 +303,8 @@ function revealAcknowledged(window) {
     return;
   }
   if (window.isMinimized()) window.restore();
-  if (quitPending || window.isDestroyed() || window.webContents.isDestroyed()) return;
+  if (quitPending || window.isDestroyed() || window.webContents.isDestroyed())
+    return;
   window.show();
   if (!quitPending && !window.isDestroyed()) window.focus();
 }
@@ -304,7 +314,11 @@ async function uiRequest(event, action, payload, execute, main = false) {
   const generation = uiGeneration;
   if (action === "status") return uiStatus();
   if (action === "lockedReady") {
-    if (quitPending || payload?.uiGeneration !== uiGeneration || !uiStatus().locked)
+    if (
+      quitPending ||
+      payload?.uiGeneration !== uiGeneration ||
+      !uiStatus().locked
+    )
       return null;
     lockAcknowledged.set(event.sender.id, uiGeneration);
     if (showAfterLock.delete(event.sender.id))
@@ -600,6 +614,8 @@ function lock(mode = "password", { idle = false } = {}) {
   }
   pendingTrayReview = null;
   importGeneration++;
+  importSelectionGeneration++;
+  pendingImportSelection = null;
   pendingImport = null;
   pendingPortable = null;
   portableGeneration++;
@@ -636,6 +652,8 @@ function runtimeLock(mode = "password") {
   stopBrowsers();
   epoch++;
   importGeneration++;
+  importSelectionGeneration++;
+  pendingImportSelection = null;
   pendingImport = null;
   pendingPortable = null;
   portableGeneration++;
@@ -683,6 +701,8 @@ function invalidateNetwork() {
   stopBrowsers();
   epoch++;
   importGeneration++;
+  importSelectionGeneration++;
+  pendingImportSelection = null;
   pendingImport = null;
   pendingPortable = null;
   portableGeneration++;
@@ -877,7 +897,8 @@ async function getBrowsers() {
     executablePath: runtime.executablePath,
     chromiumVersion: runtime.version,
     localExtensions: {
-      prepare: (ids, options) => getLocalBrowserExtensions().prepare(ids, options),
+      prepare: (ids, options) =>
+        getLocalBrowserExtensions().prepare(ids, options),
     },
     getSystemLocale: () =>
       app.getPreferredSystemLanguages()[0] || app.getLocale(),
@@ -1848,6 +1869,13 @@ async function chooseImportPaths(mode, title, extensions) {
     throw new Error(localeText.operationCancelled);
   return result.canceled ? null : result.filePaths;
 }
+function chooseAccountImportPaths(mode) {
+  const extensions =
+    mode === "single"
+      ? ["maFile", "mafile"]
+      : ["maFile", "mafile", "json", "txt", "info", "steamsession"];
+  return chooseImportPaths(mode, localeText.importAccounts, extensions);
+}
 function addProxyEntries(data, lists) {
   data.proxyLists ||= [];
   const byUrl = new Map(data.proxies.map((proxy) => [proxy.url, proxy.id]));
@@ -2665,10 +2693,51 @@ async function dispatch(action, p) {
     case "cancelBulkLogin":
       if (bulkLogin?.ticket === p.ticket) cancelJob(bulkLogin);
       return null;
+    case "pickAccountImportSource": {
+      if (!["single", "files", "folder"].includes(p.mode))
+        throw Error(localeText.unknownImportMode);
+      const capturedEpoch = epoch;
+      const generation = ++importSelectionGeneration;
+      const paths = await chooseAccountImportPaths(p.mode);
+      if (
+        capturedEpoch !== epoch ||
+        generation !== importSelectionGeneration ||
+        uiUnavailable()
+      )
+        throw Error(localeText.operationCancelled);
+      if (paths === null) return { cancelled: true };
+      if (!paths.length) throw Error(localeText.operationCancelled);
+      const selectionToken = randomUUID();
+      pendingImportSelection = {
+        selectionToken,
+        paths,
+        mode: p.mode,
+        epoch,
+        expires: Date.now() + 15 * 60 * 1000,
+      };
+      return {
+        selectionToken,
+        fileName: path.basename(paths[0]),
+        count: paths.length,
+      };
+    }
     case "prepareAccountImport": {
       const banOptions = normalizeImportBanOptions(p);
       const capturedImportEpoch = epoch;
       const singleDetails = singleImportDetails(p);
+      let selectedSource = null;
+      if (p.selectionToken !== undefined) {
+        if (
+          typeof p.selectionToken !== "string" ||
+          !pendingImportSelection ||
+          pendingImportSelection.selectionToken !== p.selectionToken ||
+          pendingImportSelection.mode !== p.mode ||
+          pendingImportSelection.epoch !== epoch ||
+          Date.now() > pendingImportSelection.expires
+        )
+          throw Error(localeText.theImportPreviewIsStaleStartTheImportAgain);
+        selectedSource = pendingImportSelection;
+      }
       if (!["files", "folder", "text", "single"].includes(p.mode))
         throw new Error(localeText.unknownImportMode);
       if (p.groupId) model.item(data.groups, p.groupId, localeText.folder);
@@ -2679,20 +2748,16 @@ async function dispatch(action, p) {
         if (
           capturedImportEpoch !== epoch ||
           importTicket !== importGeneration ||
-          uiUnavailable()
+          uiUnavailable() ||
+          (selectedSource && pendingImportSelection !== selectedSource)
         )
           throw Error(localeText.operationCancelled);
       };
-      const paths =
-        p.mode === "text"
+      const paths = selectedSource
+        ? selectedSource.paths
+        : p.mode === "text"
           ? undefined
-          : await chooseImportPaths(
-              p.mode,
-              localeText.importAccounts,
-              p.mode === "single"
-                ? ["maFile", "mafile"]
-                : ["maFile", "mafile", "json", "txt", "info", "steamsession"],
-            );
+          : await chooseAccountImportPaths(p.mode);
       if (importTicket !== importGeneration)
         throw new Error(localeText.operationCancelled);
       if (paths === null) return { cancelled: true };
@@ -2731,6 +2796,7 @@ async function dispatch(action, p) {
         );
         const plan = planPortableImport(data, filtered.bundle);
         const token = randomUUID();
+        if (selectedSource) pendingImportSelection = null;
         pendingPortable = {
           token,
           bundle,
@@ -2790,6 +2856,7 @@ async function dispatch(action, p) {
         p.mode === "folder"
           ? uniqueGroupName(data, prepared.rootName || path.basename(paths[0]))
           : null;
+      if (selectedSource) pendingImportSelection = null;
       pendingImport = {
         token,
         epoch,
@@ -2835,6 +2902,13 @@ async function dispatch(action, p) {
       };
     }
     case "cancelAccountImport":
+      if (p.selectionToken !== undefined) {
+        if (pendingImportSelection?.selectionToken === p.selectionToken) {
+          pendingImportSelection = null;
+          importSelectionGeneration++;
+        }
+        return null;
+      }
       if (p.token === undefined || pendingImport?.token === p.token) {
         clearAllocationFor("commitAccountImport", p.token);
         importGeneration++;
@@ -3158,7 +3232,9 @@ async function dispatch(action, p) {
         // Commit the vault before retiring any package. Files held open by
         // Chromium can be reclaimed during the next import.
         for (const id of removedPackages)
-          void getLocalBrowserExtensions().remove(id).catch(() => {});
+          void getLocalBrowserExtensions()
+            .remove(id)
+            .catch(() => {});
       }
       changed();
       managerChanged();
@@ -3176,6 +3252,8 @@ async function dispatch(action, p) {
 }
 
 async function tick() {
+  if (pendingImportSelection && Date.now() > pendingImportSelection.expires)
+    pendingImportSelection = null;
   if (pendingAllocation && Date.now() > pendingAllocation.expires)
     clearAllocation();
   if (pendingImport && Date.now() > pendingImport.expires) {
@@ -3252,7 +3330,11 @@ async function tick() {
           due[key] = false;
       if (!Object.values(due).some(Boolean)) continue;
       const session = account.mafile.Session || {};
-      if (!session.AccessToken && !session.RefreshToken && !hasPassword(account))
+      if (
+        !session.AccessToken &&
+        !session.RefreshToken &&
+        !hasPassword(account)
+      )
         continue;
       if (transport.rateLimitStatus(account).retryAfterMs > 0) continue;
       if (
